@@ -14,16 +14,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl implements UserService {
-    private final UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
     private final String ALIAS="USER";
 
-    // Constructor injection
-    @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    // Create new user
     @Override
     public UserDTO createUser(UserDTO userDTO) {
         User user = new User();
@@ -38,21 +32,18 @@ public class UserServiceImpl implements UserService {
         return Mapper.mapToDTO(savedUser);
     }
 
-    // Get user by ID
     @Override
     public Optional<UserDTO> getUserById(String userId) {
         return userRepository.findById(userId)
                 .map(Mapper::mapToDTO);
     }
 
-    // Get user by phone number
     @Override
     public Optional<UserDTO> getUserByPhoneNumber(String phoneNumber) {
         return userRepository.findByPhoneNumber(phoneNumber)
                 .map(Mapper::mapToDTO);
     }
 
-    // Update user
     @Override
     public UserDTO updateUser(String userId, UserDTO userDTO) {
         Optional<User> optionalUser = userRepository.findById(userId);
@@ -69,8 +60,23 @@ public class UserServiceImpl implements UserService {
         return Mapper.mapToDTO(updatedUser);
     }
 
+    @Override
+    public List<UserDTO> searchUsers(String query) {
+        List<User> users;
 
-    // Delete user
+        if (query == null || query.trim().isEmpty()) {
+            // Fetch all users if query is blank
+            users = userRepository.findAll();
+        } else {
+            // Search by name or phone number match
+            users = userRepository.findByNameContainingIgnoreCaseOrPhoneNumberContaining(query.trim(), query.trim());
+        }
+
+        return users.stream()
+                .map(Mapper::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
     @Override
     public void deleteUser(String userId) {
         userRepository.deleteById(userId);

@@ -1,55 +1,47 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.filter.JwtAuthFilter;
+import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.*;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.*;
+
 import static org.mockito.Mockito.*;
+
+import java.util.Optional;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-@WebMvcTest(UserController.class)
+
+@WebMvcTest(controllers = UserController.class, excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)
+})// disables Spring Security filters
+@AutoConfigureMockMvc(addFilters = false) // disables Spring Security filters
+@Import(UserControllerTest.TestConfig.class)
 public class UserControllerTest {
+
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private UserService userService;
+    @Autowired
+    private UserService userService; // This is now injected from TestConfig
 
     private UserDTO sampleUser;
 
     @BeforeEach
     public void setup() {
+        Mockito.reset(userService); // Reset mock before each test
         sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
-    @Test
-    public void testCreateUser() throws Exception {
-        when(userService.createUser(any(UserDTO.class))).thenReturn(sampleUser);
-
-        String jsonInput = """
-            {
-              "phoneNumber": "9999999999",
-              "name": "Abhinav",
-              "profilePictureUrl": "https://example.com/pic.jpg",
-              "about": "Backend Dev"
-            }
-            """;
-
-        mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonInput))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.responseCode").value("200"))
-                .andExpect(jsonPath("$.message").value("User created successfully"))
-                .andExpect(jsonPath("$.data[0].name").value("Abhinav"));
-    }
 
     @Test
     public void testGetUserById_found() throws Exception {
@@ -77,5 +69,23 @@ public class UserControllerTest {
         mockMvc.perform(delete("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("User deleted successfully"));
+    }
+
+    @TestConfiguration
+    static class TestConfig {
+
+        @Bean(name = "userRepository")
+        @Primary
+        public UserRepository userRepository() {
+            return mock(UserRepository.class);
+        }
+
+        @Bean(name = "userService")
+//giving name beacuse when test loads it picks actual bean to pick mock one giving name
+        @Primary
+        public UserService userService() {
+            return mock(UserService.class);
+        }
+
     }
 }

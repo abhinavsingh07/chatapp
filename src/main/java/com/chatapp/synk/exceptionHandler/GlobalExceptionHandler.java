@@ -3,6 +3,8 @@ package com.chatapp.synk.exceptionHandler;
 import com.chatapp.synk.response.BeanValidationErrors;
 import com.chatapp.synk.response.ConstraintValidationErrors;
 import com.chatapp.synk.response.ErrorResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -44,18 +46,18 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
     }
 
-//    @ExceptionHandler(ConstraintViolationException.class)
-//    ResponseEntity<ErrorResponse> onConstraintValidationException(ConstraintViolationException e) {
-//
-//        List<ConstraintValidationErrors> errors = new ArrayList<>();
-//        for (ConstraintViolation violation : e.getConstraintViolations()) {
-//            errors.add(new ConstraintValidationErrors(violation.getPropertyPath().toString(), violation.getMessage()));
-//        }
-//        ErrorResponse<ConstraintValidationErrors> resp = new ErrorResponse();
-//        resp.setResponseCode(ERROR_CODE_BADREQUEST);
-//        resp.setError(HttpStatus.BAD_REQUEST);
-//        resp.setErrors(errors);
-//        return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-//    }
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ErrorResponse> onConstraintValidationException(ConstraintViolationException e) {
+
+        List<ConstraintValidationErrors> errors = new ArrayList<>();
+        for (ConstraintViolation violation : e.getConstraintViolations()) {
+            errors.add(new ConstraintValidationErrors(violation.getPropertyPath().toString(), violation.getMessage()));
+        }
+        ErrorResponse<ConstraintValidationErrors> resp = new ErrorResponse();
+        resp.setResponseCode(ERROR_CODE_BADREQUEST);
+        resp.setError(HttpStatus.BAD_REQUEST);
+        resp.setErrors(errors);
+        return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+    }
 
 }

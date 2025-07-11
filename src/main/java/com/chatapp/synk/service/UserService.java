@@ -20,7 +20,7 @@ public interface UserService {
     UserDTO updateUser(String userId, UserDTO userDTO);
 
     // Search users by name or phone
-//   List<UserDTO> searchUsers(String query); todo
+    List<UserDTO> searchUsers(String query);
 
     // Delete user by ID
     void deleteUser(String userId);
