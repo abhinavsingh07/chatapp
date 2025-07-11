@@ -5,6 +5,8 @@ import com.chatapp.synk.response.ConstraintValidationErrors;
 import com.chatapp.synk.response.ErrorResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -20,44 +22,51 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     private final int ERROR_CODE_BADREQUEST = 400;
     private final int ERROR_CODE_INTERNALSERVERERROR = 500;
 
     @ExceptionHandler({ServiceException.class})
     public ResponseEntity<ErrorResponse> handleServiceException(ServiceException exception) {
+        logger.error("ServiceException occurred: {}", exception.getMessage(), exception);
+
         ErrorResponse errResp = new ErrorResponse();
         errResp.setResponseCode(ERROR_CODE_INTERNALSERVERERROR);
         errResp.setError(HttpStatus.INTERNAL_SERVER_ERROR);
         errResp.setErrorMessage(exception.getMessage());
-        return new ResponseEntity<ErrorResponse>(errResp, HttpStatus.INTERNAL_SERVER_ERROR);
+
+        return new ResponseEntity<>(errResp, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> processFieldValidationException(final MethodArgumentNotValidException ex) {
+        logger.warn("Validation failed: {} field(s)", ex.getBindingResult().getFieldErrorCount());
 
-        List<BeanValidationErrors> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(i -> new BeanValidationErrors(i.getField(), i.getDefaultMessage(), i.getRejectedValue()))
-                .collect(Collectors.toList());
+        List<BeanValidationErrors> errors = ex.getBindingResult().getFieldErrors().stream().map(i -> new BeanValidationErrors(i.getField(), i.getDefaultMessage(), i.getRejectedValue())).collect(Collectors.toList());
 
-        ErrorResponse<BeanValidationErrors> resp = new ErrorResponse();
+        ErrorResponse<BeanValidationErrors> resp = new ErrorResponse<>();
         resp.setResponseCode(ERROR_CODE_BADREQUEST);
         resp.setError(HttpStatus.BAD_REQUEST);
         resp.setErrors(errors);
+
         return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    ResponseEntity<ErrorResponse> onConstraintValidationException(ConstraintViolationException e) {
+    public ResponseEntity<ErrorResponse> onConstraintValidationException(ConstraintViolationException e) {
+        logger.warn("Constraint violations detected: {}", e.getConstraintViolations().size());
 
         List<ConstraintValidationErrors> errors = new ArrayList<>();
         for (ConstraintViolation violation : e.getConstraintViolations()) {
             errors.add(new ConstraintValidationErrors(violation.getPropertyPath().toString(), violation.getMessage()));
         }
-        ErrorResponse<ConstraintValidationErrors> resp = new ErrorResponse();
+
+        ErrorResponse<ConstraintValidationErrors> resp = new ErrorResponse<>();
         resp.setResponseCode(ERROR_CODE_BADREQUEST);
         resp.setError(HttpStatus.BAD_REQUEST);
         resp.setErrors(errors);
+
         return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
     }
-
 }

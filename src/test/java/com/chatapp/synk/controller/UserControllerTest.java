@@ -22,8 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = UserController.class, excludeFilters = {
-        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)
-})// disables Spring Security filters
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)// disables Spring Security filters
+})
 @AutoConfigureMockMvc(addFilters = false) // disables Spring Security filters
 @Import(UserControllerTest.TestConfig.class)
 public class UserControllerTest {
