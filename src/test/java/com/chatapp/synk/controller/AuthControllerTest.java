@@ -1,13 +1,11 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
-import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.filter.JwtAuthFilter;
-import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.service.CustomUserDetailsService;
-import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.dto.UsersDTO;
+import com.chatapp.synk.repository.UsersRepository;
+import com.chatapp.synk.security.CustomUserDetailsService;
+import com.chatapp.synk.service.UsersService;
 import com.chatapp.synk.util.JwtUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -47,17 +45,17 @@ public class AuthControllerTest {
     @Autowired
     private JwtUtil jwtUtil;  // This is now injected from TestConfig
     @Autowired
-    private UserRepository userRepository; // This is now injected from TestConfig
+    private UsersRepository usersRepository; // This is now injected from TestConfig
     @Autowired
     private CustomUserDetailsService userDetailsService;  // This is now injected from TestConfig
 
     @Autowired
-    private UserService userService;  // This is now injected from TestConfig
-    private UserDTO sampleUser;
+    private UsersService usersService;  // This is now injected from TestConfig
+    private UsersDTO sampleUser;
     @BeforeEach
     void setUp() {
-        Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        Mockito.reset(authenticationManager, jwtUtil, userDetailsService, usersService);
+        sampleUser = new UsersDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
     @Test
@@ -80,7 +78,7 @@ public class AuthControllerTest {
 
     @Test
     public void testCreateUser() throws Exception {
-        when(userService.createUser(any(UserDTO.class))).thenReturn(sampleUser);
+        when(usersService.createUser(any(UsersDTO.class))).thenReturn(sampleUser);
 
         String jsonInput = """
             {
@@ -96,7 +94,7 @@ public class AuthControllerTest {
                         .content(jsonInput))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.responseCode").value("200"))
-                .andExpect(jsonPath("$.message").value("User created successfully"))
+                .andExpect(jsonPath("$.message").value("Users created successfully"))
                 .andExpect(jsonPath("$.data[0].name").value("Abhinav"));
     }
 
@@ -114,10 +112,10 @@ public class AuthControllerTest {
             return mock(JwtUtil.class);
         }
 
-        @Bean(name = "userRepository")
+        @Bean(name = "usersRepository")
         @Primary
-        public UserRepository userRepository() {
-            return mock(UserRepository.class);
+        public UsersRepository userRepository() {
+            return mock(UsersRepository.class);
         }
 
         @Bean(name = "userDetailsService")
@@ -126,10 +124,10 @@ public class AuthControllerTest {
             return mock(CustomUserDetailsService.class);
         }
 
-        @Bean(name = "userService")
+        @Bean(name = "usersService")
         @Primary
-        public UserService userService() {
-            return mock(UserService.class);
+        public UsersService userService() {
+            return mock(UsersService.class);
         }
     }
 }

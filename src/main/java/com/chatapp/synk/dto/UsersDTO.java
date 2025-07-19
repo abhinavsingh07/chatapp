@@ -2,8 +2,10 @@ package com.chatapp.synk.dto;
 
 
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.beans.factory.annotation.Value;
 
-public class UserDTO {
+public class UsersDTO {
+
     private String id;
 
     @NotBlank(message = "Phone number is required")
@@ -14,10 +16,11 @@ public class UserDTO {
     private String profilePictureUrl;
     private String about;
 
-    public UserDTO() {
+
+    public UsersDTO() {
     }
 
-    public UserDTO(String id, String phoneNumber, String name, String profilePictureUrl, String about) {
+    public UsersDTO(String id, String phoneNumber, String name, String profilePictureUrl, String about) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.name = name;

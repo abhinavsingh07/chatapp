@@ -6,10 +6,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", schema = "chatapp")
-public class User {
+public class Users {
 
     @Id
-    @Column(name = "id")
+    @Column(name = "id", nullable = false)
     private String id;
 
     @Column(name = "phone_number", length = 15)
@@ -33,11 +33,11 @@ public class User {
     private LocalDateTime updatedAt;
 
     // Constructors
-    public User() {
+    public Users() {
     }
 
-    public User(String id, String phoneNumber, String name, String profilePictureUrl,
-                String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Users(String id, String phoneNumber, String name, String profilePictureUrl,
+                 String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.name = name;
@@ -45,6 +45,16 @@ public class User {
         this.about = about;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -105,13 +115,6 @@ public class User {
     }
 
     // Lifecycle hooks
-    @PrePersist
-    protected void onCreate() {
-        createdAt = updatedAt = LocalDateTime.now();
-    }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+
 }

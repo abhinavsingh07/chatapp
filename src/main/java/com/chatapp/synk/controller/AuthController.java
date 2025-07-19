@@ -1,12 +1,13 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
-import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.dto.UsersDTO;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.response.JwtResponse;
+import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.response.SuccessResponse;
-import com.chatapp.synk.service.CustomUserDetailsService;
-import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.security.CustomUserDetailsService;
+import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
+import com.chatapp.synk.service.UsersService;
 import com.chatapp.synk.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -41,14 +42,15 @@ public class AuthController {
     private CustomUserDetailsService userDetailsService;
 
     @Autowired
-    private UserService userService;
+    private UsersService usersService;
 
     @PostMapping("/authenticate")
     public ResponseEntity<JwtResponse> authenticate(@RequestBody AuthDTO request) throws ServiceException {
         logger.info("Authenticating user with phone number: {}", request.getPhoneNumber());
 
-        authenticate(request.getPhoneNumber(), "temppassword");
+        authenticate(request.getPhoneNumber());
 
+        //token generation flow
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getPhoneNumber());
         String token = jwtUtil.generateToken(userDetails);
 
@@ -56,27 +58,30 @@ public class AuthController {
         return ResponseEntity.ok(new JwtResponse(token));
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<SuccessResponse<UserDTO>> createUser(@Valid @RequestBody UserDTO userDTO) {
-        logger.info("Registering new user with phone number: {}", userDTO.getPhoneNumber());
-
-        UserDTO savedUser = userService.createUser(userDTO);
-
-        logger.info("User registration successful. User ID: {}", savedUser.getId());
-        return ResponseEntity.ok(new SuccessResponse<>("200", "User created successfully", List.of(savedUser)));
-    }
-
-    private void authenticate(String username, String password) throws ServiceException {
+    private void authenticate(String username) throws ServiceException {
         try {
-            logger.debug("Attempting authentication for user: {}", username);
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
-            logger.debug("Authentication successful for user: {}", username);
+            logger.info("Attempting authentication for user: {}", username);
+            //this internally calls loadsUserByUserName and check password from password encoder
+            authenticationManager.authenticate(new PhoneNumberAuthenticationToken(username));
+            logger.info("Authentication successful for user: {}", username);
         } catch (DisabledException e) {
-            logger.error("User account is disabled: {}", username);
+            logger.error("Users account is disabled: {}", username);
             throw new ServiceException("USER_DISABLED", e);
         } catch (BadCredentialsException e) {
             logger.error("Invalid credentials for user: {}", username);
             throw new ServiceException("INVALID_CREDENTIALS", e);
         }
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<SuccessResponse<UsersDTO>> createUser(@Valid @RequestBody UsersDTO userDTO) {
+        logger.info("Registering new user with phone number: {}", userDTO.getPhoneNumber());
+
+        UsersDTO savedUser = usersService.createUser(userDTO);
+
+        logger.info("Users registration successful. Users ID: {}", savedUser.getId());
+        return ResponseEntity.ok(new SuccessResponse<>("200", "Users created successfully", List.of(savedUser)));
+    }
+
+
 }

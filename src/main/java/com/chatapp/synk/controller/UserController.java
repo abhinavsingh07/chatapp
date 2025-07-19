@@ -1,8 +1,8 @@
 package com.chatapp.synk.controller;
 
-import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.dto.UsersDTO;
 import com.chatapp.synk.response.SuccessResponse;
-import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.service.UsersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +21,13 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
-    private UserService userService;
+    private UsersService usersService;
 
     @GetMapping("/search")
-    public ResponseEntity<SuccessResponse<UserDTO>> searchUsers(@RequestParam(required = false) String query) {
+    public ResponseEntity<SuccessResponse<UsersDTO>> searchUsers(@RequestParam(required = false) String query) {
         logger.info("Received search request with query: {}", query);
 
-        List<UserDTO> results = userService.searchUsers(query);
+        List<UsersDTO> results = usersService.searchUsers(query);
         if (results.isEmpty()) {
             logger.warn("No users found for query: {}", query);
         } else {
@@ -41,50 +41,50 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse<UserDTO>> getUserById(@PathVariable String id) {
+    public ResponseEntity<SuccessResponse<UsersDTO>> getUserById(@PathVariable String id) {
         logger.info("Fetching user with ID: {}", id);
 
-        Optional<UserDTO> userOpt = userService.getUserById(id);
+        Optional<UsersDTO> userOpt = usersService.getUserById(id);
         if (userOpt.isPresent()) {
-            logger.info("User with ID {} found", id);
-            return ResponseEntity.ok(new SuccessResponse<>("200", "User fetched", List.of(userOpt.get())));
+            logger.info("Users with ID {} found", id);
+            return ResponseEntity.ok(new SuccessResponse<>("200", "Users fetched", List.of(userOpt.get())));
         } else {
-            logger.warn("User with ID {} not found", id);
-            return ResponseEntity.ok(new SuccessResponse<>("404", "User not found", Collections.emptyList()));
+            logger.warn("Users with ID {} not found", id);
+            return ResponseEntity.ok(new SuccessResponse<>("404", "Users not found", Collections.emptyList()));
         }
     }
 
     @GetMapping("/phone/{phoneNumber}")
-    public ResponseEntity<SuccessResponse<UserDTO>> getUserByPhoneNumber(@PathVariable String phoneNumber) {
+    public ResponseEntity<SuccessResponse<UsersDTO>> getUserByPhoneNumber(@PathVariable String phoneNumber) {
         logger.info("Fetching user with phone number: {}", phoneNumber);
 
-        Optional<UserDTO> userOpt = userService.getUserByPhoneNumber(phoneNumber);
+        Optional<UsersDTO> userOpt = usersService.getUserByPhoneNumber(phoneNumber);
         if (userOpt.isPresent()) {
-            logger.info("User with phone {} found", phoneNumber);
-            return ResponseEntity.ok(new SuccessResponse<>("200", "User fetched", List.of(userOpt.get())));
+            logger.info("Users with phone {} found", phoneNumber);
+            return ResponseEntity.ok(new SuccessResponse<>("200", "Users fetched", List.of(userOpt.get())));
         } else {
-            logger.warn("User with phone {} not found", phoneNumber);
-            return ResponseEntity.ok(new SuccessResponse<>("404", "User not found", Collections.emptyList()));
+            logger.warn("Users with phone {} not found", phoneNumber);
+            return ResponseEntity.ok(new SuccessResponse<>("404", "Users not found", Collections.emptyList()));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse<UserDTO>> updateUser(@PathVariable String id, @RequestBody UserDTO userDTO) {
+    public ResponseEntity<SuccessResponse<UsersDTO>> updateUser(@PathVariable String id, @RequestBody UsersDTO userDTO) {
         logger.info("Received update request for user ID: {}", id);
 
-        UserDTO updatedUser = userService.updateUser(id, userDTO);
-        logger.info("User ID {} updated successfully", id);
+        UsersDTO updatedUser = usersService.updateUser(id, userDTO);
+        logger.info("Users ID {} updated successfully", id);
 
-        return ResponseEntity.ok(new SuccessResponse<>("200", "User updated successfully", List.of(updatedUser)));
+        return ResponseEntity.ok(new SuccessResponse<>("200", "Users updated successfully", List.of(updatedUser)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<SuccessResponse<Void>> deleteUser(@PathVariable String id) {
         logger.info("Received delete request for user ID: {}", id);
 
-        userService.deleteUser(id);
-        logger.info("User ID {} deleted successfully", id);
+        usersService.deleteUser(id);
+        logger.info("Users ID {} deleted successfully", id);
 
-        return ResponseEntity.ok(new SuccessResponse<>("200", "User deleted successfully", Collections.emptyList()));
+        return ResponseEntity.ok(new SuccessResponse<>("200", "Users deleted successfully", Collections.emptyList()));
     }
 }

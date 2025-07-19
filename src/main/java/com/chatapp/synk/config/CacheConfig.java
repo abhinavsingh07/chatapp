@@ -6,7 +6,11 @@ import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,14 +18,10 @@ import java.util.List;
 @EnableCaching
 public class CacheConfig {
 
-    public static final String USERCACHE = "usercache";
-
     @Bean
-    public CacheManager cacheManager() {
-        SimpleCacheManager cacheManager = new SimpleCacheManager();
-        List<ConcurrentMapCache> cacheNames = new ArrayList<ConcurrentMapCache>();
-        cacheNames.add(new ConcurrentMapCache(USERCACHE));
-        cacheManager.setCaches(cacheNames);
-        return cacheManager;
+    public RedisCacheConfiguration redisCacheConfiguration() {
+        return RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(5)) // TTL for cache entries
+                .disableCachingNullValues()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
     }
 }

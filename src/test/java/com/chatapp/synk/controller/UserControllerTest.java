@@ -1,9 +1,9 @@
 package com.chatapp.synk.controller;
 
-import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.filter.JwtAuthFilter;
-import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.dto.UsersDTO;
+import com.chatapp.synk.security.JwtAuthFilter;
+import com.chatapp.synk.repository.UsersRepository;
+import com.chatapp.synk.service.UsersService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -32,20 +32,20 @@ public class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private UserService userService; // This is now injected from TestConfig
+    private UsersService usersService; // This is now injected from TestConfig
 
-    private UserDTO sampleUser;
+    private UsersDTO sampleUser;
 
     @BeforeEach
     public void setup() {
-        Mockito.reset(userService); // Reset mock before each test
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        Mockito.reset(usersService); // Reset mock before each test
+        sampleUser = new UsersDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
 
     @Test
     public void testGetUserById_found() throws Exception {
-        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.of(sampleUser));
+        when(usersService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.of(sampleUser));
 
         mockMvc.perform(get("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
                 .andExpect(status().isOk())
@@ -54,7 +54,7 @@ public class UserControllerTest {
 
     @Test
     public void testGetUserById_notFound() throws Exception {
-        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.empty());
+        when(usersService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/users/99"))
                 .andExpect(status().isOk())
@@ -64,11 +64,11 @@ public class UserControllerTest {
 
     @Test
     public void testDeleteUser() throws Exception {
-        doNothing().when(userService).deleteUser("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER");
+        doNothing().when(usersService).deleteUser("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER");
 
         mockMvc.perform(delete("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User deleted successfully"));
+                .andExpect(jsonPath("$.message").value("Users deleted successfully"));
     }
 
     @TestConfiguration
@@ -76,15 +76,15 @@ public class UserControllerTest {
 
         @Bean(name = "userRepository")
         @Primary
-        public UserRepository userRepository() {
-            return mock(UserRepository.class);
+        public UsersRepository userRepository() {
+            return mock(UsersRepository.class);
         }
 
-        @Bean(name = "userService")
+        @Bean(name = "usersService")
 //giving name beacuse when test loads it picks actual bean to pick mock one giving name
         @Primary
-        public UserService userService() {
-            return mock(UserService.class);
+        public UsersService userService() {
+            return mock(UsersService.class);
         }
 
     }

@@ -1,4 +1,4 @@
-package com.chatapp.synk.response;
+package com.chatapp.synk.security;
 
 import java.io.Serializable;
 import java.util.Date;

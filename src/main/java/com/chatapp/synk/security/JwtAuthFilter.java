@@ -1,7 +1,6 @@
-package com.chatapp.synk.filter;
+package com.chatapp.synk.security;
 
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.service.CustomUserDetailsService;
 import com.chatapp.synk.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -11,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -30,12 +30,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private CustomUserDetailsService userDetailsService;
+    private UserDetailsService customUserDetailsService;
 
     private static final List<String> EXCLUDED_URLS = List.of("/auth/authenticate", "/auth/register");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        //skip urls from jwt validation
+        String requestPath = request.getRequestURI();
+        for (String uri : EXCLUDED_URLS) {
+            if (requestPath.contains(uri)) {
+                filterChain.doFilter(request, response);
+                return; // Skip JWT authentication
+            }
+        }
 
         final String authHeader = request.getHeader("Authorization");
         String token = null;
@@ -48,7 +56,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 logger.debug("JWT extracted for username: {}", username);
             } catch (Exception e) {
                 logger.error("Failed to extract username from JWT token", e);
-                throw new ServiceException(e.getMessage(),e);
+                throw new ServiceException(e.getMessage(), e);
             }
         } else {
             logger.warn("Missing or invalid Authorization header");
@@ -56,7 +64,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
                 if (jwtUtil.validateToken(token, userDetails)) {
                     logger.info("JWT validation succeeded for user: {}", username);
