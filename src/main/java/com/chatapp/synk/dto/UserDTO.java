@@ -2,9 +2,8 @@ package com.chatapp.synk.dto;
 
 
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.beans.factory.annotation.Value;
 
-public class UsersDTO {
+public class UserDTO {
 
     private String id;
 
@@ -17,10 +16,10 @@ public class UsersDTO {
     private String about;
 
 
-    public UsersDTO() {
+    public UserDTO() {
     }
 
-    public UsersDTO(String id, String phoneNumber, String name, String profilePictureUrl, String about) {
+    public UserDTO(String id, String phoneNumber, String name, String profilePictureUrl, String about) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.name = name;

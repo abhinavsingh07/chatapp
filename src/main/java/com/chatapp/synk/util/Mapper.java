@@ -1,14 +1,11 @@
 package com.chatapp.synk.util;
 
-import com.chatapp.synk.dto.ContactsDTO;
-import com.chatapp.synk.dto.UsersDTO;
-import com.chatapp.synk.entity.Contacts;
-import com.chatapp.synk.entity.Users;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.time.LocalDateTime;
+import com.chatapp.synk.dto.ContactDTO;
+import com.chatapp.synk.dto.ConversationDTO;
+import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.entity.Contact;
+import com.chatapp.synk.entity.Conversation;
+import com.chatapp.synk.entity.User;
 
 public class Mapper {
 
@@ -16,19 +13,21 @@ public class Mapper {
 
     private static final String ALIAS_CONTACT="CONT";
 
-    public static UsersDTO mapToUserDTO(Users users) {
-        UsersDTO dto = new UsersDTO();
-        dto.setId(users.getId());
-        dto.setPhoneNumber(users.getPhoneNumber());
-        dto.setName(users.getName());
-        dto.setProfilePictureUrl(users.getProfilePictureUrl());
-        dto.setAbout(users.getAbout());
+    private static final String ALIAS_CONVERSATION = "CONV";
+
+    public static UserDTO mapToUserDTO(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setName(user.getName());
+        dto.setProfilePictureUrl(user.getProfilePictureUrl());
+        dto.setAbout(user.getAbout());
         return dto;
     }
 
-    public static Users mapToUserEntity(UsersDTO dto) {
+    public static User mapToUserEntity(UserDTO dto) {
         String generatedId = RandomUUIDGenerater.getId(ALIAS_USER).toString();
-        Users user = new Users();
+        User user = new User();
         user.setId(generatedId);
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setName(dto.getName());
@@ -37,20 +36,33 @@ public class Mapper {
         return user;
     }
 
-    public static Contacts mapToContactEntity(ContactsDTO dto) {
+    public static Contact mapToContactEntity(ContactDTO dto) {
         String generatedId = RandomUUIDGenerater.getId(ALIAS_CONTACT).toString();
-        Contacts contact = new Contacts();
+        Contact contact = new Contact();
         contact.setId(generatedId);
         contact.setUserId(dto.getUserId());
         contact.setContactUserId(dto.getContactUserId());
         return contact;
     }
 
-    public static ContactsDTO mapToContactDTO(Contacts contact) {
-        ContactsDTO dto = new ContactsDTO();
+    public static ContactDTO mapToContactDTO(Contact contact) {
+        ContactDTO dto = new ContactDTO();
         dto.setId(contact.getId());
         dto.setUserId(contact.getUserId());
         dto.setContactUserId(contact.getContactUserId());
         return dto;
+    }
+
+
+
+    public static Conversation mapToConversationEntity(ConversationDTO dto) {
+        Conversation conversation = new Conversation();
+        conversation.setId(RandomUUIDGenerater.getId(ALIAS_CONVERSATION).toString());
+        conversation.setConversationType(dto.getConversationType());
+        return conversation;
+    }
+
+    public static ConversationDTO mapToConversationDTO(Conversation entity) {
+        return new ConversationDTO(entity.getId(), entity.getConversationType());
     }
 }

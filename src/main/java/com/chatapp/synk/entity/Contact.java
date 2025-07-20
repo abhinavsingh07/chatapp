@@ -1,26 +1,32 @@
-package com.chatapp.synk.dto;
+package com.chatapp.synk.entity;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-public class ContactsDTO {
+@Entity
+@Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "contact_user_id"}))
+public class Contact {
 
+    @Id
+    @Column(name = "id", nullable = false,length = 100)
     private String id;
-    @NotBlank(message = "UserId is required")
+
+    @Column(name = "user_id", nullable = false,length = 100)
     private String userId;
-    @NotBlank(message = "Contact UserId is required")
+
+    @Column(name = "contact_user_id", nullable = false,length = 100)
     private String contactUserId;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public ContactsDTO(){
+    public Contact() {
     }
 
-    public ContactsDTO(String id, String userId, String contactUserId, LocalDateTime createdAt) {
-        this.id = id;
-        this.userId = userId;
-        this.contactUserId = contactUserId;
-        this.createdAt = createdAt;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
     }
 
     public String getId() {
@@ -54,4 +60,6 @@ public class ContactsDTO {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+
 }

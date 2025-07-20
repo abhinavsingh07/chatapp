@@ -1,35 +1,35 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
-import com.chatapp.synk.dto.UsersDTO;
-import com.chatapp.synk.repository.UsersRepository;
+import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.security.CustomUserDetailsService;
-import com.chatapp.synk.service.UsersService;
+import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.http.MediaType;
-
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.ArrayList;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false) // disables Spring Security filters
@@ -45,17 +45,17 @@ public class AuthControllerTest {
     @Autowired
     private JwtUtil jwtUtil;  // This is now injected from TestConfig
     @Autowired
-    private UsersRepository usersRepository; // This is now injected from TestConfig
+    private UserRepository userRepository; // This is now injected from TestConfig
     @Autowired
     private CustomUserDetailsService userDetailsService;  // This is now injected from TestConfig
 
     @Autowired
-    private UsersService usersService;  // This is now injected from TestConfig
-    private UsersDTO sampleUser;
+    private UserService userService;  // This is now injected from TestConfig
+    private UserDTO sampleUser;
     @BeforeEach
     void setUp() {
-        Mockito.reset(authenticationManager, jwtUtil, userDetailsService, usersService);
-        sampleUser = new UsersDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
     @Test
@@ -68,17 +68,17 @@ public class AuthControllerTest {
 
         when(userDetailsService.loadUserByUsername(phoneNumber)).thenReturn(mockUserDetails);
         when(jwtUtil.generateToken(mockUserDetails)).thenReturn("mockToken");
-
         mockMvc.perform(post("/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"phoneNumber\": \"" + phoneNumber + "\"}"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("mockToken"));
+               // .andExpect(jsonPath("$.expiry").value(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))) to do
+                .andExpect(jsonPath("$.token").value("mockToken"));
     }
 
     @Test
     public void testCreateUser() throws Exception {
-        when(usersService.createUser(any(UsersDTO.class))).thenReturn(sampleUser);
+        when(userService.createUser(any(UserDTO.class))).thenReturn(sampleUser);
 
         String jsonInput = """
             {
@@ -94,7 +94,7 @@ public class AuthControllerTest {
                         .content(jsonInput))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.responseCode").value("200"))
-                .andExpect(jsonPath("$.message").value("Users created successfully"))
+                .andExpect(jsonPath("$.message").value("User created successfully"))
                 .andExpect(jsonPath("$.data[0].name").value("Abhinav"));
     }
 
@@ -112,10 +112,10 @@ public class AuthControllerTest {
             return mock(JwtUtil.class);
         }
 
-        @Bean(name = "usersRepository")
+        @Bean(name = "userRepository")
         @Primary
-        public UsersRepository userRepository() {
-            return mock(UsersRepository.class);
+        public UserRepository userRepository() {
+            return mock(UserRepository.class);
         }
 
         @Bean(name = "userDetailsService")
@@ -124,10 +124,10 @@ public class AuthControllerTest {
             return mock(CustomUserDetailsService.class);
         }
 
-        @Bean(name = "usersService")
+        @Bean(name = "userService")
         @Primary
-        public UsersService userService() {
-            return mock(UsersService.class);
+        public UserService userService() {
+            return mock(UserService.class);
         }
     }
 }

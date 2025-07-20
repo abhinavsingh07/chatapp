@@ -1,25 +1,24 @@
 package com.chatapp.synk.controller;
 
-import com.chatapp.synk.dto.UsersDTO;
+import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.security.JwtAuthFilter;
-import com.chatapp.synk.repository.UsersRepository;
-import com.chatapp.synk.service.UsersService;
+import com.chatapp.synk.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.*;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 
 import static org.mockito.Mockito.*;
-
-import java.util.Optional;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = UserController.class, excludeFilters = {
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)// disables Spring Security filters
@@ -32,20 +31,20 @@ public class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private UsersService usersService; // This is now injected from TestConfig
+    private UserService userService; // This is now injected from TestConfig
 
-    private UsersDTO sampleUser;
+    private UserDTO sampleUser;
 
     @BeforeEach
     public void setup() {
-        Mockito.reset(usersService); // Reset mock before each test
-        sampleUser = new UsersDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        Mockito.reset(userService); // Reset mock before each test
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
 
     @Test
     public void testGetUserById_found() throws Exception {
-        when(usersService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.of(sampleUser));
+        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(sampleUser);
 
         mockMvc.perform(get("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
                 .andExpect(status().isOk())
@@ -54,7 +53,7 @@ public class UserControllerTest {
 
     @Test
     public void testGetUserById_notFound() throws Exception {
-        when(usersService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(Optional.empty());
+        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(null);
 
         mockMvc.perform(get("/api/users/99"))
                 .andExpect(status().isOk())
@@ -64,11 +63,11 @@ public class UserControllerTest {
 
     @Test
     public void testDeleteUser() throws Exception {
-        doNothing().when(usersService).deleteUser("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER");
+        doNothing().when(userService).deleteUser("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER");
 
         mockMvc.perform(delete("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Users deleted successfully"));
+                .andExpect(jsonPath("$.message").value("User deleted successfully"));
     }
 
     @TestConfiguration
@@ -76,15 +75,15 @@ public class UserControllerTest {
 
         @Bean(name = "userRepository")
         @Primary
-        public UsersRepository userRepository() {
-            return mock(UsersRepository.class);
+        public UserRepository userRepository() {
+            return mock(UserRepository.class);
         }
 
-        @Bean(name = "usersService")
-//giving name beacuse when test loads it picks actual bean to pick mock one giving name
+        @Bean(name = "userService")
+        //giving name beacuse when test loads it picks actual bean to pick mock one giving name
         @Primary
-        public UsersService userService() {
-            return mock(UsersService.class);
+        public UserService userService() {
+            return mock(UserService.class);
         }
 
     }

@@ -1,13 +1,13 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
-import com.chatapp.synk.dto.UsersDTO;
+import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.CustomUserDetailsService;
 import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
-import com.chatapp.synk.service.UsersService;
+import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,7 +41,7 @@ public class AuthController {
     private CustomUserDetailsService userDetailsService;
 
     @Autowired
-    private UsersService usersService;
+    private UserService userService;
 
     @PostMapping("/authenticate")
     public ResponseEntity<JwtResponse> authenticate(@RequestBody AuthDTO request) throws ServiceException {
@@ -65,7 +64,7 @@ public class AuthController {
             authenticationManager.authenticate(new PhoneNumberAuthenticationToken(username));
             logger.info("Authentication successful for user: {}", username);
         } catch (DisabledException e) {
-            logger.error("Users account is disabled: {}", username);
+            logger.error("User account is disabled: {}", username);
             throw new ServiceException("USER_DISABLED", e);
         } catch (BadCredentialsException e) {
             logger.error("Invalid credentials for user: {}", username);
@@ -74,13 +73,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<SuccessResponse<UsersDTO>> createUser(@Valid @RequestBody UsersDTO userDTO) {
+    public ResponseEntity<SuccessResponse<UserDTO>> createUser(@Valid @RequestBody UserDTO userDTO) {
         logger.info("Registering new user with phone number: {}", userDTO.getPhoneNumber());
 
-        UsersDTO savedUser = usersService.createUser(userDTO);
+        UserDTO savedUser = userService.createUser(userDTO);
 
-        logger.info("Users registration successful. Users ID: {}", savedUser.getId());
-        return ResponseEntity.ok(new SuccessResponse<>("200", "Users created successfully", List.of(savedUser)));
+        logger.info("User registration successful. User ID: {}", savedUser.getId());
+        return ResponseEntity.ok(new SuccessResponse<>("200", "User created successfully", List.of(savedUser)));
     }
 
 

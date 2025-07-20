@@ -1,8 +1,8 @@
 package com.chatapp.synk.security;
 
 import com.chatapp.synk.controller.AuthController;
-import com.chatapp.synk.entity.Users;
-import com.chatapp.synk.repository.UsersRepository;
+import com.chatapp.synk.entity.User;
+import com.chatapp.synk.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +19,13 @@ import java.util.Collections;
 public class CustomUserDetailsService implements UserDetailsService {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     @Autowired
-    private UsersRepository usersRepository;
+    private UserRepository userRepository;
 
     @Override
     @Cacheable(value = "userDetailsCache", key = "#phoneNumber", unless = "#result == null")
     public UserDetails loadUserByUsername(String phoneNumber) throws UsernameNotFoundException {
-        Users user = usersRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new UsernameNotFoundException("Users not found with phone: " + phoneNumber));
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with phone: " + phoneNumber));
         logger.info("loadsUserByUsername called.. phonenumber::{}", user.getPhoneNumber());
         return new CustomUserDetails(
                 user.getPhoneNumber(),  // treated as username

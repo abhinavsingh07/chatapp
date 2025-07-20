@@ -6,10 +6,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", schema = "chatapp")
-public class Users {
+public class User {
 
     @Id
-    @Column(name = "id", nullable = false)
+    @Column(name = "id", nullable = false,length = 100)
     private String id;
 
     @Column(name = "phone_number", length = 15)
@@ -33,11 +33,11 @@ public class Users {
     private LocalDateTime updatedAt;
 
     // Constructors
-    public Users() {
+    public User() {
     }
 
-    public Users(String id, String phoneNumber, String name, String profilePictureUrl,
-                 String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(String id, String phoneNumber, String name, String profilePictureUrl,
+                String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.name = name;

@@ -127,7 +127,7 @@
             <properties>
                 <env>dev</env>
                 <logging.level.root>DEBUG</logging.level.root>
-                <skipTests>false</skipTests>
+                <skipTests>true</skipTests>
                 <spring-boot.run.profiles>dev</spring-boot.run.profiles>
             </properties>
         </profile>

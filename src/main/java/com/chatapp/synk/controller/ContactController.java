@@ -1,14 +1,12 @@
 package com.chatapp.synk.controller;
 
-import com.chatapp.synk.dto.ContactsDTO;
+import com.chatapp.synk.dto.ContactDTO;
 import com.chatapp.synk.response.SuccessResponse;
-import com.chatapp.synk.service.ContactsService;
+import com.chatapp.synk.service.ContactService;
 import jakarta.validation.Valid;
-import jakarta.websocket.server.PathParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,25 +16,25 @@ import java.util.List;
 @RequestMapping("/api/contacts")
 public class ContactController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
-    private final ContactsService contactService;
+    private final ContactService contactService;
 
     @Autowired
-    public ContactController(ContactsService contactService) {
+    public ContactController(ContactService contactService) {
         this.contactService = contactService;
     }
 
     @PostMapping
-    public ResponseEntity<SuccessResponse<ContactsDTO>> addContact(@Valid @RequestBody ContactsDTO contactsDTO) {
+    public ResponseEntity<SuccessResponse<ContactDTO>> addContact(@Valid @RequestBody ContactDTO contactDTO) {
         logger.info("Creating contact for given userid..");
-        ContactsDTO contact = contactService.addContact(contactsDTO);
+        ContactDTO contact = contactService.addContact(contactDTO);
         return ResponseEntity.ok(new SuccessResponse<>("200", "Contact created successfully", List.of(contact)));
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<SuccessResponse<ContactsDTO>> getContactsBYUserId(@PathVariable(required = true) String userId) {
+    public ResponseEntity<SuccessResponse<ContactDTO>> getContactsByUserId(@PathVariable(required = true) String userId) {
         logger.info("Received contact search request for userId: {}", userId);
 
-        List<ContactsDTO> results = contactService.getContacts(userId);
+        List<ContactDTO> results = contactService.getContactsByUserId(userId);
 
         if (results.isEmpty()) {
             logger.warn("No contacts found for userId: {}", userId);
@@ -45,7 +43,7 @@ public class ContactController {
         }
 
         String msg = results.isEmpty() ? "No contacts found" : "Contact list retrieved";
-        String code = results.isEmpty() ? "204" : "200";
+        String code = results.isEmpty() ? "404" : "200";
 
         return ResponseEntity.ok(new SuccessResponse<>(code, msg, results));
     }
