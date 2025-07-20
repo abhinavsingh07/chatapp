@@ -52,42 +52,62 @@ public class ConversationParticipantControllerTest {
                     }
                 """;
 
-        mockMvc.perform(post("/api/participants").contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("201")).andExpect(jsonPath("$.data[0].id").value("456_PART"));
+        mockMvc.perform(post("/api/participants")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("201"))
+                .andExpect(jsonPath("$.data[0].id").value("456_PART"));
     }
 
     @Test
     public void testGetParticipantById_found() throws Exception {
         when(participantService.getParticipantById("456_PART")).thenReturn(sampleParticipant);
 
-        mockMvc.perform(get("/api/participants/456_PART")).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("200")).andExpect(jsonPath("$.data[0].id").value("456_PART"));
+        mockMvc.perform(get("/api/participants/456_PART"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("200"))
+                .andExpect(jsonPath("$.data[0].id").value("456_PART"));
     }
 
     @Test
     public void testGetParticipantById_notFound() throws Exception {
         when(participantService.getParticipantById("456_PART")).thenReturn(null);
 
-        mockMvc.perform(get("/api/participants/456_PART")).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("404")).andExpect(jsonPath("$.data").isArray());
+        mockMvc.perform(get("/api/participants/456_PART"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("404"))
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     @Test
     public void testGetByConversation_found() throws Exception {
         when(participantService.getParticipantsByConversationId("123_CONVO")).thenReturn(List.of(sampleParticipant));
 
-        mockMvc.perform(get("/api/participants/conversation/123_CONVO")).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("200")).andExpect(jsonPath("$.data[0].conversationId").value("123_CONVO"));
+        mockMvc.perform(get("/api/participants/conversation/123_CONVO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("200"))
+                .andExpect(jsonPath("$.data[0].conversationId").value("123_CONVO"));
     }
 
     @Test
     public void testGetByConversation_notFound() throws Exception {
         when(participantService.getParticipantsByConversationId("123_CONVO")).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/participants/conversation/123_CONVO")).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("404")).andExpect(jsonPath("$.data").isArray());
+        mockMvc.perform(get("/api/participants/conversation/123_CONVO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("404"))
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     @Test
     public void testDeleteParticipant() throws Exception {
         doNothing().when(participantService).deleteByConversationid("123_CONVO");
 
-        mockMvc.perform(delete("/api/participants/conversation/123_CONVO")).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("200")).andExpect(jsonPath("$.message").value("Participant removed"));
+        mockMvc.perform(delete("/api/participants/conversation/123_CONVO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseCode").value("200"))
+                .andExpect(jsonPath("$.message").value("Participant removed"));
     }
 
     @TestConfiguration
@@ -98,5 +118,6 @@ public class ConversationParticipantControllerTest {
         public ConversationParticipantService participantService() {
             return mock(ConversationParticipantService.class);
         }
+
     }
 }
