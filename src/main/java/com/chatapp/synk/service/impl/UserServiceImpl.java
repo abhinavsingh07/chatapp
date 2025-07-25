@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,11 +26,14 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     @CachePut(value = "userCache", key = "#result.phoneNumber")
     public UserDTO createUser(UserDTO userDTO) {
         logger.info("Creating new user with phone: {}", userDTO.getPhoneNumber());
-        User user = Mapper.mapToUserEntity(userDTO);
+        User user = Mapper.mapToUserEntity(userDTO,passwordEncoder);
         User savedUser = userRepository.save(user);
         logger.info("User saved successfully with ID: {}", savedUser.getId());
         return Mapper.mapToUserDTO(savedUser);

@@ -15,6 +15,9 @@ public class User {
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
 
+    @Column(name = "password", length = 200)
+    private String password;
+
     @Column(name = "name", length = 100)
     private String name;
 
@@ -36,10 +39,11 @@ public class User {
     public User() {
     }
 
-    public User(String id, String phoneNumber, String name, String profilePictureUrl,
+    public User(String id, String phoneNumber,String password, String name, String profilePictureUrl,
                 String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.phoneNumber = phoneNumber;
+        this.password=password;
         this.name = name;
         this.profilePictureUrl = profilePictureUrl;
         this.about = about;
@@ -47,6 +51,7 @@ public class User {
         this.updatedAt = updatedAt;
     }
 
+    // Lifecycle hooks
     @PrePersist
     protected void onCreate() {
         createdAt = updatedAt = LocalDateTime.now();
@@ -114,7 +119,11 @@ public class User {
         this.updatedAt = updatedAt;
     }
 
-    // Lifecycle hooks
+    public String getPassword() {
+        return password;
+    }
 
-
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }

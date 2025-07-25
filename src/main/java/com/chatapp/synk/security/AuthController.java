@@ -1,12 +1,9 @@
-package com.chatapp.synk.controller;
+package com.chatapp.synk.security;
 
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.response.SuccessResponse;
-import com.chatapp.synk.security.CustomUserDetailsService;
-import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
 import jakarta.validation.Valid;
@@ -47,7 +44,7 @@ public class AuthController {
     public ResponseEntity<JwtResponse> authenticate(@RequestBody AuthDTO request) throws ServiceException {
         logger.info("Authenticating user with phone number: {}", request.getPhoneNumber());
 
-        authenticate(request.getPhoneNumber());
+        authenticate(request.getPhoneNumber(),request.getPassword());
 
         //token generation flow
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getPhoneNumber());
@@ -57,11 +54,11 @@ public class AuthController {
         return ResponseEntity.ok(new JwtResponse(token));
     }
 
-    private void authenticate(String username) throws ServiceException {
+    private void authenticate(String username,String password) throws ServiceException {
         try {
             logger.info("Attempting authentication for user: {}", username);
             //this internally calls loadsUserByUserName and check password from password encoder
-            authenticationManager.authenticate(new PhoneNumberAuthenticationToken(username));
+            authenticationManager.authenticate(new PhoneNumberAuthenticationToken(username,password));
             logger.info("Authentication successful for user: {}", username);
         } catch (DisabledException e) {
             logger.error("User account is disabled: {}", username);

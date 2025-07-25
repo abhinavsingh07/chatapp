@@ -3,6 +3,7 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.repository.UserRepository;
+import com.chatapp.synk.security.AuthController;
 import com.chatapp.synk.security.CustomUserDetailsService;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
@@ -55,7 +56,7 @@ public class AuthControllerTest {
     @BeforeEach
     void setUp() {
         Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
     @Test

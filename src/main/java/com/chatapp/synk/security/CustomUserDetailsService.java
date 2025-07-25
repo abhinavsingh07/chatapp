@@ -1,6 +1,5 @@
 package com.chatapp.synk.security;
 
-import com.chatapp.synk.controller.AuthController;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.repository.UserRepository;
 import org.slf4j.Logger;
@@ -26,10 +25,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String phoneNumber) throws UsernameNotFoundException {
         User user = userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with phone: " + phoneNumber));
-        logger.info("loadsUserByUsername called.. phonenumber::{}", user.getPhoneNumber());
+        logger.info("loadsUserByUsername called.. phonenumber::{} , passord::{}", user.getPhoneNumber(),user.getPassword());
         return new CustomUserDetails(
                 user.getPhoneNumber(),  // treated as username
-                "temporary-password",
+                user.getPassword(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
     }

@@ -8,6 +8,7 @@ import com.chatapp.synk.entity.Contact;
 import com.chatapp.synk.entity.Conversation;
 import com.chatapp.synk.entity.ConversationParticipant;
 import com.chatapp.synk.entity.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class Mapper {
 
@@ -23,17 +24,19 @@ public class Mapper {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
         dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setPassword(user.getPassword());
         dto.setName(user.getName());
         dto.setProfilePictureUrl(user.getProfilePictureUrl());
         dto.setAbout(user.getAbout());
         return dto;
     }
 
-    public static User mapToUserEntity(UserDTO dto) {
+    public static User mapToUserEntity(UserDTO dto, PasswordEncoder passwordEncoder) {
         String generatedId = RandomUUIDGenerater.getId(ALIAS_USER).toString();
         User user = new User();
         user.setId(generatedId);
         user.setPhoneNumber(dto.getPhoneNumber());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setName(dto.getName());
         user.setProfilePictureUrl(dto.getProfilePictureUrl());
         user.setAbout(dto.getAbout());
