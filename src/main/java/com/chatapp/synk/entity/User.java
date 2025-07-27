@@ -15,6 +15,9 @@ public class User {
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
 
+    @Column(name = "email", length = 100, unique = true)
+    private String email;
+
     @Column(name = "password", length = 200)
     private String password;
 
@@ -39,10 +42,11 @@ public class User {
     public User() {
     }
 
-    public User(String id, String phoneNumber,String password, String name, String profilePictureUrl,
+    public User(String id, String phoneNumber,String email, String password, String name, String profilePictureUrl,
                 String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.phoneNumber = phoneNumber;
+        this.email = email;
         this.password=password;
         this.name = name;
         this.profilePictureUrl = profilePictureUrl;
@@ -125,5 +129,13 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

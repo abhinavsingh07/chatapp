@@ -10,7 +10,7 @@ public interface UserService {
 
     UserDTO getUserById(String userId);
 
-    UserDTO getUserByPhoneNumber(String phoneNumber);
+    UserDTO getUserByPhoneNumberOrEmail(String phoneNumberOrEmail);
 
     UserDTO updateUser(String userId, UserDTO userDTO);
 

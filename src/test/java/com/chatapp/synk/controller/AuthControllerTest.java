@@ -3,7 +3,6 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.security.AuthController;
 import com.chatapp.synk.security.CustomUserDetailsService;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
@@ -56,18 +55,18 @@ public class AuthControllerTest {
     @BeforeEach
     void setUp() {
         Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","abc@xyz.com","password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
     @Test
     void testAuthenticate() throws Exception {
         String phoneNumber = "1234567890";
         AuthDTO request = new AuthDTO();
-        request.setPhoneNumber(phoneNumber);
+        request.setPhoneNumberOrEmail(phoneNumber);
 
         UserDetails mockUserDetails = new User("testuser", "password", new ArrayList<>());
 
-        when(userDetailsService.loadUserByUsername(phoneNumber)).thenReturn(mockUserDetails);
+        when(userDetailsService.loadUserByUsername(request.getPhoneNumberOrEmail())).thenReturn(mockUserDetails);
         when(jwtUtil.generateToken(mockUserDetails)).thenReturn("mockToken");
         mockMvc.perform(post("/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,6 +84,8 @@ public class AuthControllerTest {
             {
               "phoneNumber": "9999999999",
               "name": "Abhinav",
+              "email":"abc@xyz.com",
+              "password":"hello",
               "profilePictureUrl": "https://example.com/pic.jpg",
               "about": "Backend Dev"
             }

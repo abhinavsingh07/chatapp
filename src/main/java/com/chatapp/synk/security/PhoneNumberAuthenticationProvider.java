@@ -2,12 +2,14 @@ package com.chatapp.synk.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -28,28 +30,38 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PhoneNumberAuthenticationProvider implements AuthenticationProvider {
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(PhoneNumberAuthenticationProvider.class);
+    @Autowired
     private UserDetailsService userDetailsService;//passing from security config inside authenticationProvider() method
-
+    @Autowired
     private PasswordEncoder passwordEncoder;//passing from security config inside authenticationProvider() method
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        String phoneNumber = authentication.getPrincipal().toString();
+        String identifier = authentication.getPrincipal().toString().trim(); // could be phone or email
         String password = authentication.getCredentials().toString();
-        UserDetails userDetails = userDetailsService.loadUserByUsername(phoneNumber);
-        logger.debug("This PhoneNumberAuthenticationProvider authenticate method calls by authentication manager..");
-        if (userDetails.getUsername().equals(phoneNumber)) {
-            if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-                throw new BadCredentialsException("Invalid password");
-            }
-            PhoneNumberAuthenticationToken authenticatedToken = new PhoneNumberAuthenticationToken();
-            authenticatedToken.setDetails(userDetails);
-            authenticatedToken.setAuthenticated(true);
-            return authenticatedToken;
+
+        UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(identifier);
+        } catch (UsernameNotFoundException ex) {
+            logger.error("User not found for identifier: {}", identifier);
+            throw new BadCredentialsException("Invalid username or password");
         }
-        throw new BadCredentialsException("Phone number mismatch");
+
+        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+            logger.warn("Password mismatch for user: {}", identifier);
+            throw new BadCredentialsException("Invalid password");
+        }
+        //constructor sets is authenticated true
+        PhoneNumberAuthenticationToken authenticatedToken = new PhoneNumberAuthenticationToken(userDetails,userDetails.getAuthorities());
+        authenticatedToken.setAuthenticated(true);
+        authenticatedToken.setDetails(userDetails); // optional, useful for downstream access
+        // Log successful authentication
+        logger.debug("Authentication successful for identifier: {}", identifier);
+        return authenticatedToken;
     }
+
 
     @Override
     public boolean supports(Class<?> authentication) {

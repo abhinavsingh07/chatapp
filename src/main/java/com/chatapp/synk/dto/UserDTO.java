@@ -1,7 +1,6 @@
 package com.chatapp.synk.dto;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.NotBlank;
 
 public class UserDTO {
@@ -10,7 +9,10 @@ public class UserDTO {
 
     @NotBlank(message = "Phone number is required")
     private String phoneNumber;
-    @JsonIgnore
+
+    @NotBlank(message = "Email is required")
+    private String email;
+    @NotBlank(message = "Password is required")
     private String password;
     @NotBlank(message = "Name is required")
     private String name;
@@ -22,9 +24,10 @@ public class UserDTO {
     }
 
     //used in test class
-    public UserDTO(String id, String phoneNumber, String password, String name, String profilePictureUrl, String about) {
+    public UserDTO(String id, String phoneNumber,String email, String password, String name, String profilePictureUrl, String about) {
         this.id = id;
         this.phoneNumber = phoneNumber;
+        this.email = email;
         this.password = password;
         this.name = name;
         this.profilePictureUrl = profilePictureUrl;
@@ -78,5 +81,13 @@ public class UserDTO {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

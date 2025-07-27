@@ -38,7 +38,7 @@ public class UserControllerTest {
     @BeforeEach
     public void setup() {
         Mockito.reset(userService); // Reset mock before each test
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","abc@xyz.com", "password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
 

@@ -1,11 +1,11 @@
 package com.chatapp.synk.security;
 
-import com.chatapp.synk.entity.User;
-import com.chatapp.synk.repository.UserRepository;
+import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.exceptionHandler.ServiceException;
+import com.chatapp.synk.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,20 +16,29 @@ import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
+
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Override
-    @Cacheable(value = "userDetailsCache", key = "#phoneNumber", unless = "#result == null")
-    public UserDetails loadUserByUsername(String phoneNumber) throws UsernameNotFoundException {
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with phone: " + phoneNumber));
-        logger.info("loadsUserByUsername called.. phonenumber::{} , passord::{}", user.getPhoneNumber(),user.getPassword());
-        return new CustomUserDetails(
-                user.getPhoneNumber(),  // treated as username
-                user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+    public UserDetails loadUserByUsername(String phoneNumberOrEmail) throws UsernameNotFoundException {
+        UserDTO userDTO = null;
+        try {
+            userDTO = userService.getUserByPhoneNumberOrEmail(phoneNumberOrEmail);
+        } catch (ServiceException ex) {
+            logger.error("Invalid identifier format: {}", phoneNumberOrEmail);
+            throw new UsernameNotFoundException("Invalid phone number or email format");
+        }
+
+        if (userDTO == null) {
+            logger.warn("No user found for identifier: {}", phoneNumberOrEmail);
+            throw new UsernameNotFoundException("User not found with identifier: " + phoneNumberOrEmail);
+        }
+
+        logger.info("loadUserByUsername successful: identifier={}, phone={}, role={}", phoneNumberOrEmail, userDTO.getPhoneNumber(), "ROLE_USER");
+        return new CustomUserDetails(userDTO.getPhoneNumber(),  // treated as username
+                userDTO.getPassword(), Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
     }
+
 }

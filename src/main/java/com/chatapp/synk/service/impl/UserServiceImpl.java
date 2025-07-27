@@ -6,6 +6,8 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.Mapper;
+import com.chatapp.synk.util.StringUtility;
+import com.chatapp.synk.util.AppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +29,21 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    public PasswordEncoder passwordEncoder;
 
     @Override
     @CachePut(value = "userCache", key = "#result.phoneNumber")
-    public UserDTO createUser(UserDTO userDTO) {
+    public UserDTO createUser(UserDTO userDTO) throws ServiceException {
         logger.info("Creating new user with phone: {}", userDTO.getPhoneNumber());
-        User user = Mapper.mapToUserEntity(userDTO,passwordEncoder);
-        User savedUser = userRepository.save(user);
-        logger.info("User saved successfully with ID: {}", savedUser.getId());
-        return Mapper.mapToUserDTO(savedUser);
+        try {
+            User user = Mapper.mapToUserEntity(userDTO, passwordEncoder);
+            User savedUser = userRepository.save(user);
+            logger.info("User saved successfully with ID: {}", savedUser.getId());
+            return Mapper.mapToUserDTO(savedUser);
+        } catch (Exception ex) {
+            logger.error("Unexpected error while creating user", ex);
+            throw new ServiceException(ex.getMessage(), ex);
+        }
     }
 
     @Override
@@ -53,21 +60,40 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(value = "userCache", key = "#phoneNumber" , unless = "#result == null")
-    public UserDTO getUserByPhoneNumber(String phoneNumber) {
-        logger.info("Fetching user by phone number: {}", phoneNumber);
-        Optional<UserDTO> result = userRepository.findByPhoneNumber(phoneNumber).map(Mapper::mapToUserDTO);
+    @Cacheable(value = "userCache", key = "#phoneNumberOrEmail", unless = "#result == null")
+    public UserDTO getUserByPhoneNumberOrEmail(String phoneNumberOrEmail) {
+        if (StringUtility.isEmpty(phoneNumberOrEmail)) {
+            logger.error("Input identifier is empty. Cannot fetch user.");
+            throw new ServiceException("Phone number or email must be provided");
+        }
+
+        String trimmed = phoneNumberOrEmail.trim();
+
+        Optional<UserDTO> result;
+
+        if (AppUtils.isValidEmail(trimmed)) {
+            logger.info("Fetching user by email: {}", trimmed);
+            result = userRepository.findByEmail(trimmed).map(Mapper::mapToUserDTO);
+        } else if (AppUtils.isValidPhoneNumber(trimmed)) {
+            logger.info("Fetching user by phone number: {}", trimmed);
+            result = userRepository.findByPhoneNumber(trimmed).map(Mapper::mapToUserDTO);
+        } else {
+            logger.error("Invalid identifier format: {}", trimmed);
+            throw new ServiceException("Identifier must be a valid email or phone number");
+        }
 
         if (result.isEmpty()) {
-            logger.warn("No user found with phone number: {}", phoneNumber);
+            logger.warn("No user found with identifier: {}", trimmed);
+            return null;
         }
 
         return result.get();
     }
 
+
     @Override
     @CacheEvict(value = "userCache", key = "#userDTO.id")
-    public UserDTO updateUser(String userId, UserDTO userDTO) {
+    public UserDTO updateUser(String userId, UserDTO userDTO) throws ServiceException {
         logger.info("Updating user with ID: {}", userId);
 
         Optional<User> optionalUser = userRepository.findById(userId);
@@ -76,14 +102,19 @@ public class UserServiceImpl implements UserService {
             throw new ServiceException("User not found with ID: " + userId);
         }
 
-        User user = optionalUser.get();
-        user.setName(userDTO.getName());
-        user.setProfilePictureUrl(userDTO.getProfilePictureUrl());
-        user.setAbout(userDTO.getAbout());
+        try {
+            User user = optionalUser.get();
+            user.setName(userDTO.getName());
+            user.setProfilePictureUrl(userDTO.getProfilePictureUrl());
+            user.setAbout(userDTO.getAbout());
 
-        User updatedUser = userRepository.save(user);
-        logger.info("User updated successfully. ID: {}", updatedUser.getId());
-        return Mapper.mapToUserDTO(updatedUser);
+            User updatedUser = userRepository.save(user);
+            logger.info("User updated successfully. ID: {}", updatedUser.getId());
+            return Mapper.mapToUserDTO(updatedUser);
+        } catch (Exception ex) {
+            logger.error("Error while updating user with ID: {}", userId, ex.getMessage());
+            throw new ServiceException(ex.getMessage(), ex);
+        }
     }
 
     @Override

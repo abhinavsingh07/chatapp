@@ -53,20 +53,6 @@ public class UserController {
         }
     }
 
-    @GetMapping("/phone/{phoneNumber}")
-    public ResponseEntity<SuccessResponse<UserDTO>> getUserByPhoneNumber(@PathVariable String phoneNumber) {
-        logger.info("Fetching user with phone number: {}", phoneNumber);
-
-        UserDTO userOpt = userService.getUserByPhoneNumber(phoneNumber);
-        if (userOpt !=null) {
-            logger.info("User with phone {} found", phoneNumber);
-            return ResponseEntity.ok(new SuccessResponse<>("200", "User fetched", List.of(userOpt)));
-        } else {
-            logger.warn("User with phone {} not found", phoneNumber);
-            return ResponseEntity.ok(new SuccessResponse<>("404", "User not found", Collections.emptyList()));
-        }
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<SuccessResponse<UserDTO>> updateUser(@PathVariable String id, @RequestBody UserDTO userDTO) {
         logger.info("Received update request for user ID: {}", id);

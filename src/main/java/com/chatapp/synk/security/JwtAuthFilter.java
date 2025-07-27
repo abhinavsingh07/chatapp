@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,9 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -32,6 +31,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService customUserDetailsService;
 
+    public JwtAuthFilter() {
+        // Default constructor for Spring to inject dependencies
+    }
+
     private static final List<String> EXCLUDED_URLS = List.of("/auth/authenticate", "/auth/register");
 
     @Override
@@ -40,6 +43,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String requestPath = request.getRequestURI();
         for (String uri : EXCLUDED_URLS) {
             if (requestPath.contains(uri)) {
+                logger.debug("Skipping JWT authentication for request: {}", requestPath);
                 filterChain.doFilter(request, response);
                 return; // Skip JWT authentication
             }

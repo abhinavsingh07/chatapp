@@ -1,21 +1,14 @@
 package com.chatapp.synk.security;
 
-import com.chatapp.synk.security.JwtAuthFilter;
-import com.chatapp.synk.security.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -27,26 +20,9 @@ public class SecurityConfig {
     private JwtAuthFilter jwtAuthFilter;
 
     @Autowired
-    private UserDetailsService customUserDetailsService;
-
-    @Autowired
     private PhoneNumberAuthenticationProvider phoneNumberAuthProvider;
 
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        phoneNumberAuthProvider.setUserDetailsService(customUserDetailsService);
-        phoneNumberAuthProvider.setPasswordEncoder(passwordEncoder());
-        return phoneNumberAuthProvider; // use the instance Spring knows about
-    }
-
-
-//    @Bean
+    //    @Bean
 //    public AuthenticationProvider authenticationProvider() {
 //        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 //        provider.setUserDetailsService(userDetailsService);
@@ -60,7 +36,16 @@ public class SecurityConfig {
 //        return config.getAuthenticationManager();
 //    }
 
-    //we need to pass our custom provider to provider manager
+
+    //set the user details service and password encoder for the custom authentication provider
+    //passes in security filter chain method.
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        return phoneNumberAuthProvider; // use the instance Spring knows about
+    }
+
+
+    //we need to register our custom provider to authenticationManager
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder builder = http.getSharedObject(AuthenticationManagerBuilder.class);
@@ -76,6 +61,8 @@ public class SecurityConfig {
                         .permitAll().anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class).build();
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
+
 }
