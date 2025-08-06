@@ -8,16 +8,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 //adding  JsonIgnoreProperties for now as Caching to redis causing json searlization issue for these fields.
-@JsonIgnoreProperties({
-        "enabled",
-        "accountNonExpired",
-        "accountNonLocked",
-        "credentialsNonExpired",
-        "authorities"
-})
+@JsonIgnoreProperties({"enabled", "accountNonExpired", "accountNonLocked", "credentialsNonExpired", "authorities"})
 public class CustomUserDetails implements UserDetails {
     private String username;//setting phone no in this field
     private String password;
+    private String name;
+    private String email;
+    private String userRoles;
+    private String profilePictureUrl;
+    private String id;
+
 
     @JsonIgnore
     private Collection<? extends GrantedAuthority> authorities;
@@ -25,10 +25,36 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails() {
     }
 
-    public CustomUserDetails(String username, String password, Collection<? extends GrantedAuthority> authorities) {
+    /**
+     * Constructor for CustomUserDetails.
+     *
+     * @param username          the username (phone number)
+     * @param name              the name of the user
+     * @param password          the password of the user
+     * @param authorities       the authorities granted to the user
+     * @param email             the email of the user
+     * @param profilePictureUrl the URL of the user's profile picture
+     * @param id                the unique identifier of the user
+     */
+    public CustomUserDetails(String username, String name, String password, Collection<? extends GrantedAuthority> authorities, String email, String profilePictureUrl,String id) {
         this.username = username;
         this.password = password;
         this.authorities = authorities;
+        this.name = name;
+        this.email = email;
+        this.profilePictureUrl = profilePictureUrl;
+        this.id= id;
+        //give me uthorities as comma seprated
+        this.userRoles = authorities.stream().map(GrantedAuthority::getAuthority).reduce((a, b) -> a + ";" + b).orElse("");
+    }
+
+    //this is using in test
+    public CustomUserDetails(String username, String name, String email,String userRole, String profilePictureUrl) {
+        this.username = username;
+        this.name = name;
+        this.email = email;
+        this.profilePictureUrl = profilePictureUrl;
+        this.userRoles = userRole;
     }
 
     @Override
@@ -64,5 +90,25 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return UserDetails.super.isEnabled();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getUserRoles() {
+        return userRoles;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public String getId() {
+        return id;
     }
 }

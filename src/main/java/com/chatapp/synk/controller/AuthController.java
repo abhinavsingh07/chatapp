@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.CustomUserDetails;
 import com.chatapp.synk.security.CustomUserDetailsService;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
@@ -17,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,11 +49,11 @@ public class AuthController {
 
         authenticate(authDTO.getPhoneNumberOrEmail(), authDTO.getPassword());
         //token generation flow
-        UserDetails userDetails = userDetailsService.loadUserByUsername(authDTO.getPhoneNumberOrEmail());
+        CustomUserDetails userDetails = userDetailsService.loadUserByUsername(authDTO.getPhoneNumberOrEmail());
         String token = jwtUtil.generateToken(userDetails);
 
         logger.info("JWT token generated successfully for user: {}", authDTO.getPhoneNumberOrEmail());
-        return ResponseEntity.ok(new JwtResponse(token));
+        return ResponseEntity.ok(new JwtResponse(token, userDetails.getUsername(),userDetails.getName(),userDetails.getUserRoles(),userDetails.getEmail(),userDetails.getProfilePictureUrl(),userDetails.getId()));
     }
 
     private void authenticate(String username, String password) throws ServiceException {

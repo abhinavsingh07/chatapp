@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private UserService userService;
 
     @Override
-    public UserDetails loadUserByUsername(String phoneNumberOrEmail) throws UsernameNotFoundException {
+    public CustomUserDetails loadUserByUsername(String phoneNumberOrEmail) throws UsernameNotFoundException {
         UserDTO userDTO = null;
         try {
             userDTO = userService.getUserByPhoneNumberOrEmail(phoneNumberOrEmail);
@@ -37,8 +36,9 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         logger.info("loadUserByUsername successful: identifier={}, phone={}, role={}", phoneNumberOrEmail, userDTO.getPhoneNumber(), "ROLE_USER");
-        return new CustomUserDetails(userDTO.getPhoneNumber(),  // treated as username
-                userDTO.getPassword(), Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+        //Now not storing ROLE_USER todo to save in db
+        return new CustomUserDetails(userDTO.getPhoneNumber(), userDTO.getName(),
+                userDTO.getPassword(), Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")), userDTO.getEmail(),userDTO.getProfilePictureUrl(),userDTO.getId());
     }
 
 }

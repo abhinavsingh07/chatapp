@@ -3,6 +3,7 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.repository.UserRepository;
+import com.chatapp.synk.security.CustomUserDetails;
 import com.chatapp.synk.security.CustomUserDetailsService;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.JwtUtil;
@@ -18,11 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.ArrayList;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -52,28 +49,45 @@ public class AuthControllerTest {
     @Autowired
     private UserService userService;  // This is now injected from TestConfig
     private UserDTO sampleUser;
+
     @BeforeEach
     void setUp() {
         Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","abc@xyz.com","password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "abc@xyz.com", "password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
     }
 
     @Test
     void testAuthenticate() throws Exception {
         String phoneNumber = "1234567890";
+        String name = "testuser";
+        String email = "testemail";
+        String profilePictureUrl = "testprofilePictureUrl";
+        String password = "testpassword";
+        String userRole= "ROLE_USER";
+        String mockToken= "mockToken";
+
+        // Create a sample AuthDTO request
         AuthDTO request = new AuthDTO();
         request.setPhoneNumberOrEmail(phoneNumber);
+        request.setPassword(password);
 
-        UserDetails mockUserDetails = new User("testuser", "password", new ArrayList<>());
+        CustomUserDetails mockUserDetails = new CustomUserDetails(phoneNumber, name, email, userRole, profilePictureUrl);
 
         when(userDetailsService.loadUserByUsername(request.getPhoneNumberOrEmail())).thenReturn(mockUserDetails);
-        when(jwtUtil.generateToken(mockUserDetails)).thenReturn("mockToken");
+        when(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockToken);
+
         mockMvc.perform(post("/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phoneNumber\": \"" + phoneNumber + "\"}"))
+                        .content("{\"phoneNumberOrEmail\": \"" + phoneNumber + "\"}"))
                 .andExpect(status().isOk())
-               // .andExpect(jsonPath("$.expiry").value(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))) to do
-                .andExpect(jsonPath("$.token").value("mockToken"));
+                //.andExpect(jsonPath("$.expiry").value(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))) to do
+                .andExpect(jsonPath("$.jwtToken").value(mockToken))
+                .andExpect(jsonPath("$.username").value(phoneNumber))
+                .andExpect(jsonPath("$.name").value(name))
+                .andExpect(jsonPath("$.roles").value(userRole))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.profilePictureUrl").value(profilePictureUrl));
+
     }
 
     @Test
@@ -81,23 +95,17 @@ public class AuthControllerTest {
         when(userService.createUser(any(UserDTO.class))).thenReturn(sampleUser);
 
         String jsonInput = """
-            {
-              "phoneNumber": "9999999999",
-              "name": "Abhinav",
-              "email":"abc@xyz.com",
-              "password":"hello",
-              "profilePictureUrl": "https://example.com/pic.jpg",
-              "about": "Backend Dev"
-            }
-            """;
+                {
+                  "phoneNumber": "9999999999",
+                  "name": "Abhinav",
+                  "email":"abc@xyz.com",
+                  "password":"hello",
+                  "profilePictureUrl": "https://example.com/pic.jpg",
+                  "about": "Backend Dev"
+                }
+                """;
 
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonInput))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.responseCode").value("200"))
-                .andExpect(jsonPath("$.message").value("User created successfully"))
-                .andExpect(jsonPath("$.data[0].name").value("Abhinav"));
+        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(jsonInput)).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("200")).andExpect(jsonPath("$.message").value("User created successfully")).andExpect(jsonPath("$.data[0].name").value("Abhinav"));
     }
 
     @TestConfiguration

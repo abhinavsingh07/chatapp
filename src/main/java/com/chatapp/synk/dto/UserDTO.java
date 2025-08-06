@@ -18,13 +18,14 @@ public class UserDTO {
     private String name;
     private String profilePictureUrl;
     private String about;
+    private String userRoles;
 
 
     public UserDTO() {
     }
 
     //used in test class
-    public UserDTO(String id, String phoneNumber,String email, String password, String name, String profilePictureUrl, String about) {
+    public UserDTO(String id, String phoneNumber, String email, String password, String name, String profilePictureUrl, String about) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.email = email;
@@ -89,5 +90,13 @@ public class UserDTO {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUserRoles() {
+        return userRoles;
+    }
+
+    public void setUserRoles(String userRoles) {
+        this.userRoles = userRoles;
     }
 }

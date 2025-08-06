@@ -2,7 +2,7 @@ package com.chatapp.synk.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public class ContactDTO {
+public class  ContactDTO {
 
     private String id;
     @NotBlank(message = "UserId is required")
