@@ -11,6 +11,7 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.service.ContactService;
 import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.util.AppUtils;
 import com.chatapp.synk.util.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +23,13 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,26 +45,8 @@ public class ContactServiceImpl implements ContactService {
 
     @Autowired
     private EmailService emailService;
-
-    @Override
-    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")
-    public ContactDTO addContact(ContactDTO contactDTO) {
-        logger.info("Attempting to add contact: userId={}, contactUserId={}", contactDTO.getUserId(), contactDTO.getContactUserId());
-
-        List<Contact> existingContact = contactRepository.findByUserIdAndContactUserId(contactDTO.getUserId(), contactDTO.getContactUserId());
-
-        if (existingContact.size() > 0) {
-            logger.warn("Contact already exists for userId={} and contactUserId={}", contactDTO.getUserId(), contactDTO.getContactUserId());
-            throw new ServiceException("Contact already exists for this user. Please try again with a different contact.", HttpStatus.BAD_REQUEST);
-        }
-
-        logger.debug("No existing contact found. Proceeding to save new contact.");
-
-        ContactDTO savedContactDTO = saveContact(contactDTO);
-        logger.info("Contact saved successfully with ID: {}", savedContactDTO.getId());
-        return savedContactDTO;
-    }
-
+    @Autowired
+    private ExecutorService taskExecutor;
 
     @Override
     @Cacheable(value = "contactListCache", key = "#userId")
@@ -103,58 +89,94 @@ public class ContactServiceImpl implements ContactService {
         logger.info("Contact with ID {} deleted successfully", contactId);
     }
 
+    @Override
+    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")
+    public ContactDTO addContact(ContactDTO dto) {
+        String userId= dto.getUserId();
+        String email = dto.getEmail();
+        logger.info("Adding contact for userId={} by email={}", userId, email);
 
-    public ContactDTO addContactEmailFlow(String userId, String email) {
-        logger.info("Attempting to add contact by email: {}", email);
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(email)) {
+            throw new ServiceException("UserId and email are required", HttpStatus.BAD_REQUEST);
+        }
 
-        if (userId == null || email == null || email.isBlank()) {
-            throw new ServiceException("User ID and email are required", HttpStatus.BAD_REQUEST);
+        if (!AppUtils.isValidEmail(email)) {
+            throw new ServiceException("Invalid email format", HttpStatus.BAD_REQUEST);
         }
 
         try {
-            // Check if user exists
-            UserDTO userDTO = userService.getUserByPhoneNumberOrEmail(email);
+            // Check if user exists for the given email
+            UserDTO existingUser = userService.getUserByPhoneNumberOrEmail(email);
 
-            // Existing user → Add as contact
+            // Prevent adding self as contact
+            if (existingUser.getId().equals(userId)) {
+                throw new ServiceException("You cannot add yourself as a contact", HttpStatus.BAD_REQUEST);
+            }
+
+            // Prevent duplicate contact
+            if (contactExists(userId, existingUser.getId())) {
+                throw new ServiceException("Contact already exists for this user", HttpStatus.BAD_REQUEST);
+            }
+
+            // Registered user flow
             ContactDTO contactDTO = new ContactDTO();
             contactDTO.setUserId(userId);
-            contactDTO.setContactUserId(userDTO.getId());
-            contactDTO.setStatus(ContactStatus.ADDED);
-            //contactDTO.setEmailStatus(EmailStatus.NOT_APPLICABLE);
+            contactDTO.setContactUserId(existingUser.getId());//contact userid setting
+            contactDTO.setContactStatus(ContactStatus.ADDED);
+            contactDTO.setEmailStatus(EmailStatus.NOT_APPLICABLE);
+
             return saveContact(contactDTO);
 
         } catch (ServiceException ex) {
             if (ex.getStatus() == HttpStatus.NOT_FOUND) {
-                // No existing user → Invite via email
-                ContactDTO contactDTO = new ContactDTO();
-                contactDTO.setUserId(userId);
-                contactDTO.setStatus(ContactStatus.INVITED);
-                contactDTO.setEmailStatus(EmailStatus.PENDING);
-
-                ContactDTO savedContact = saveContact(contactDTO);
-                //this whole is blocking call we need to take out as async call
-                EmailDTO emailDTO = new EmailDTO(email, "You're invited to join ChatApp!", "Hi there!\n\nYou've been invited to join ChatApp. " + "Click the link below to register:\nhttps://yourapp.com/register");
-
-                boolean sent = emailService.sendEmail(emailDTO);
-                savedContact.setEmailStatus(sent ? EmailStatus.SENT : EmailStatus.FAILED);
-
-                // Update with email status
-                saveContact(savedContact);
-                //this whole is blocking call we need to take out as async call
-
-                return savedContact;
-            } else {
-                throw ex;
+                // Invite flow
+                return handleInviteFlow(userId, email);
             }
+            throw ex;
         }
     }
 
+    private ContactDTO handleInviteFlow(String userId, String email) {
+        logger.info("No registered user found for email={}, sending invite...", email);
+
+        // Save contact first
+        ContactDTO contactDTO = new ContactDTO();
+        contactDTO.setUserId(userId);
+        contactDTO.setContactUserId(null);//contact user id is null for invite
+        contactDTO.setContactStatus(ContactStatus.INVITED);
+        contactDTO.setEmailStatus(EmailStatus.PENDING);
+
+        ContactDTO savedContact = saveContact(contactDTO);
+
+        // Send invite asynchronously
+        CompletableFuture.runAsync(() -> {
+            boolean sent = emailService.sendEmail(
+                    new EmailDTO(
+                            email,
+                            "You're invited to join ChatApp!",
+                            "Hi there!\n\nYou've been invited to join ChatApp. " +
+                                    "Click here to register:\nhttps://yourapp.com/register"
+                    )
+            );
+            updateEmailStatus(savedContact.getId(), sent ? EmailStatus.SENT : EmailStatus.FAILED);
+        },taskExecutor);//use our thread pool not fork join pool
+
+        return savedContact;
+    }
+
+    private boolean contactExists(String userId, String contactUserId) {
+        return !contactRepository.findByUserIdAndContactUserId(userId, contactUserId).isEmpty();
+    }
+
+    private void updateEmailStatus(String contactId, EmailStatus status) {
+        contactRepository.findById(contactId).ifPresent(contact -> {
+            contact.setEmailStatus(status);
+            contactRepository.save(contact);
+        });
+    }
 
     private ContactDTO saveContact(ContactDTO contactDTO) {
         try {
-            if (contactDTO.getUserId() == null) {
-                throw new ServiceException("Invalid contact details", HttpStatus.BAD_REQUEST);
-            }
             logger.info("Saving contact for userId: {}", contactDTO.getUserId());
             Contact contactEntity = Mapper.mapToContactEntity(contactDTO);
             Contact saved = contactRepository.save(contactEntity);

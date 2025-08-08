@@ -46,8 +46,9 @@ public class ContactController {
     @PostMapping
     public ResponseEntity<SuccessResponse<ContactDTO>> addContact(@Valid @RequestBody ContactDTO contactDTO) {
         logger.info("Creating contact for given userid..");
-        ContactDTO contact = contactService.addContact(contactDTO);
-        return ResponseEntity.ok(new SuccessResponse<>("200", "Contact created successfully", List.of(contact)));
+        ContactDTO savedContact = contactService.addContact(contactDTO);
+        String message = savedContact.getContactStatus() == ContactStatus.ADDED ? "Contact created successfully" : "Invitation sent successfully";
+        return ResponseEntity.ok(new SuccessResponse<>("200", message, List.of(savedContact)));
     }
 
     @DeleteMapping("/{contactId}")
@@ -56,20 +57,5 @@ public class ContactController {
         contactService.deleteContact(contactId);
         return ResponseEntity.ok(new SuccessResponse<>("200", "Contact deleted successfully", List.of()));
     }
-
-    @PostMapping("/add-by-email/{userId}/{contactEmail}")
-    public ResponseEntity<SuccessResponse<ContactDTO>> addContactByEmail(@PathVariable String userId, @PathVariable String contactEmail)  {
-
-        logger.info("Request received to add contact by email: {} for userId: {}", contactEmail, userId);
-
-        ContactDTO contactDTO = contactService.addContactEmailFlow(userId, contactEmail);
-
-        String message = contactDTO.getStatus() == ContactStatus.ADDED ? "Contact added successfully." : "User not registered. Invitation sent, contact saved as invited.";
-
-        SuccessResponse<ContactDTO> response = new SuccessResponse<>("200", message, List.of(contactDTO));
-
-        return ResponseEntity.ok(response);
-    }
-
 
 }

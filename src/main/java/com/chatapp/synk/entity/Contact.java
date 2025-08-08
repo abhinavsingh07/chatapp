@@ -22,11 +22,12 @@ public class Contact {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
+    @Column(name = "contact_status")
     @Enumerated(EnumType.STRING)
-    private ContactStatus status = ContactStatus.ADDED;//default status is ADDED
+    private ContactStatus contactStatus;
+    @Column(name = "email_status")
     @Enumerated(EnumType.STRING)
-    private EmailStatus emailStatus = EmailStatus.NOT_APPLICABLE;//default email status is NOT_APPLICABLE
+    private EmailStatus emailStatus;
 
     public Contact() {
     }
@@ -68,12 +69,12 @@ public class Contact {
         this.createdAt = createdAt;
     }
 
-    public ContactStatus getStatus() {
-        return status;
+    public ContactStatus getContactStatus() {
+        return contactStatus;
     }
 
-    public void setStatus(ContactStatus status) {
-        this.status = status;
+    public void setContactStatus(ContactStatus contactStatus) {
+        this.contactStatus = contactStatus;
     }
 
     public EmailStatus getEmailStatus() {

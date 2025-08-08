@@ -7,10 +7,12 @@ import jakarta.validation.constraints.NotBlank;
 public class  ContactDTO {
 
     private String id;
-    @NotBlank(message = "UserId is required")
+    @NotBlank(message = "User Id is required")
     private String userId;
+    @NotBlank(message = "Email is required")
+    private String email;
     private String contactUserId;
-    private ContactStatus status;
+    private ContactStatus contactStatus;
     private EmailStatus emailStatus;
 
     public ContactDTO(){
@@ -46,12 +48,12 @@ public class  ContactDTO {
         this.contactUserId = contactUserId;
     }
 
-    public ContactStatus getStatus() {
-        return status;
+    public ContactStatus getContactStatus() {
+        return contactStatus;
     }
 
-    public void setStatus(ContactStatus status) {
-        this.status = status;
+    public void setContactStatus(ContactStatus contactStatus) {
+        this.contactStatus = contactStatus;
     }
 
     public EmailStatus getEmailStatus() {
@@ -60,5 +62,13 @@ public class  ContactDTO {
 
     public void setEmailStatus(EmailStatus emailStatus) {
         this.emailStatus = emailStatus;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

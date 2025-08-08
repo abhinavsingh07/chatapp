@@ -53,6 +53,7 @@ public class Mapper {
         contact.setId(generatedId);
         contact.setUserId(dto.getUserId());
         contact.setContactUserId(dto.getContactUserId());
+        contact.setContactStatus(dto.getContactStatus());
         contact.setEmailStatus(dto.getEmailStatus());
         return contact;
     }
@@ -62,6 +63,7 @@ public class Mapper {
         dto.setId(contact.getId());
         dto.setUserId(contact.getUserId());
         dto.setContactUserId(contact.getContactUserId());
+        dto.setContactStatus(contact.getContactStatus());
         dto.setEmailStatus(contact.getEmailStatus());
         return dto;
     }
