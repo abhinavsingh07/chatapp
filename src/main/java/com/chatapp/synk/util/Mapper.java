@@ -12,15 +12,6 @@ import com.chatapp.synk.enums.UserStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class Mapper {
-
-    private static final String ALIAS_USER = "USER";
-
-    private static final String ALIAS_CONTACT = "CONT";
-
-    private static final String ALIAS_CONVERSATION = "CONV";
-
-    private static final String ALIAS_PARTICIPANT = "PART";
-
     public static UserDTO mapToUserDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
@@ -35,7 +26,7 @@ public class Mapper {
     }
 
     public static User mapToUserEntity(UserDTO dto, PasswordEncoder passwordEncoder) {
-        String generatedId = RandomUUIDGenerater.getId(ALIAS_USER).toString();
+        String generatedId = RandomUUIDGenerater.getId(User.ALIAS_USER).toString();
         User user = new User();
         user.setId(generatedId);
         user.setPhoneNumber(dto.getPhoneNumber());
@@ -49,7 +40,7 @@ public class Mapper {
     }
 
     public static Contact mapToContactEntity(ContactDTO dto) {
-        String generatedId = RandomUUIDGenerater.getId(ALIAS_CONTACT).toString();
+        String generatedId = RandomUUIDGenerater.getId(Contact.ALIAS_CONTACT).toString();
         Contact contact = new Contact();
         contact.setId(generatedId);
         contact.setUserId(dto.getUserId());
@@ -74,7 +65,7 @@ public class Mapper {
 
     public static Conversation mapToConversationEntity(ConversationDTO dto) {
         Conversation conversation = new Conversation();
-        conversation.setId(RandomUUIDGenerater.getId(ALIAS_CONVERSATION).toString());
+        conversation.setId(RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString());
         conversation.setConversationType(dto.getConversationType());
         return conversation;
     }
@@ -85,7 +76,7 @@ public class Mapper {
 
     public static ConversationParticipant mapToParticipantEntity(ConversationParticipantDTO dto) {
         ConversationParticipant participant = new ConversationParticipant();
-        participant.setId(RandomUUIDGenerater.getId(ALIAS_PARTICIPANT).toString());
+        participant.setId(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString());
         participant.setConversationId(dto.getConversationId());
         participant.setUserId(dto.getUserId());
         return participant;

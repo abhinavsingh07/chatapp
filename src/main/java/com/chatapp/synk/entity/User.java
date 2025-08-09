@@ -1,5 +1,6 @@
 package com.chatapp.synk.entity;
 
+import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.enums.UserStatus;
 import jakarta.persistence.*;
 
@@ -8,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users", schema = "chatapp")
 public class User {
-
+    public  static final String ALIAS_USER = "USER";
     @Id
     @Column(name = "id", nullable = false,length = 100)
     private String id;
@@ -41,6 +42,10 @@ public class User {
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
     private UserStatus status;
+
+    @Column(name = "user_role")
+    @Enumerated(EnumType.STRING)
+    private RoleName userRole;
 
     // Constructors
     public User() {
@@ -149,5 +154,13 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public RoleName getUserRole() {
+        return userRole;
+    }
+
+    public void setUserRole(RoleName userRole) {
+        this.userRole = userRole;
     }
 }

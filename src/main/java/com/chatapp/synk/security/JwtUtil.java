@@ -30,7 +30,8 @@ public class JwtUtil {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))
-                .signWith(secretKey, SignatureAlgorithm.HS256).compact();
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public String extractUsername(String token) {

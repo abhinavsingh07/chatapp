@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "conversation_participants", schema = "chatapp")
 public class ConversationParticipant {
-
+    public static final String ALIAS_PARTICIPANT = "PART";
     @Id
     @Column(name = "id", nullable = false)
     private String id;
