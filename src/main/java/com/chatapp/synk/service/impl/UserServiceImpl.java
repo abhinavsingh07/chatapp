@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.entity.Contact;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.entity.UserRole;
+import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ContactRepository;
@@ -124,6 +125,7 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
             logger.info("User saved successfully with ID: {}", savedUser.getId());
+            //handle invited flow if applicable
             handleInvitedFlow(savedUser);
 
             return Mapper.mapToUserDTO(savedUser);
@@ -139,7 +141,7 @@ public class UserServiceImpl implements UserService {
         List<Contact> contacts = contactRepository.findByEmailAndContactUserIdIsNull(savedUser.getEmail());
         if (!contacts.isEmpty()) {
             // Update contacts whose email matches this new user’s email but have null contactUserId
-            int updatedCount = contactRepository.updateContactUserIdByEmail(savedUser.getId(), savedUser.getEmail());
+            int updatedCount = contactRepository.updateContactUserIdByEmail(savedUser.getId(), ContactStatus.ADDED, savedUser.getEmail());
             logger.info("Updated contactUserId for {} contacts matching email  {}", updatedCount, savedUser.getEmail());
         } else {
             logger.info("No pending contacts to update for email {}", savedUser.getEmail());

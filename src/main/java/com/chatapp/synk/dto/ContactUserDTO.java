@@ -9,14 +9,18 @@ public class ContactUserDTO {
     private ContactStatus contactStatus;
     private EmailStatus emailStatus;
     private String contactUserId;
+    private String contactEmail;
 
+    //user table fields
     private String name;
     private String phoneNumber;
     private String email;
     private String profilePictureUrl;
     private UserStatus status;
 
-    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status) {
+
+    //using JPQL query
+    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId,String contactEmail, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status) {
         this.contactId = contactId;
         this.contactStatus = contactStatus;
         this.emailStatus = emailStatus;
@@ -26,6 +30,7 @@ public class ContactUserDTO {
         this.email = email;
         this.profilePictureUrl = profilePictureUrl;
         this.status = status;
+        this.contactEmail=contactEmail;
     }
 
     public ContactUserDTO() {
@@ -101,5 +106,13 @@ public class ContactUserDTO {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
     }
 }

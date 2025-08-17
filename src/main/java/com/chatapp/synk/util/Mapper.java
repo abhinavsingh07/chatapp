@@ -1,13 +1,7 @@
 package com.chatapp.synk.util;
 
-import com.chatapp.synk.dto.ContactDTO;
-import com.chatapp.synk.dto.ConversationDTO;
-import com.chatapp.synk.dto.ConversationParticipantDTO;
-import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.entity.Contact;
-import com.chatapp.synk.entity.Conversation;
-import com.chatapp.synk.entity.ConversationParticipant;
-import com.chatapp.synk.entity.User;
+import com.chatapp.synk.dto.*;
+import com.chatapp.synk.entity.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class Mapper {
@@ -85,5 +79,31 @@ public class Mapper {
 
     public static ConversationParticipantDTO mapToParticipantDTO(ConversationParticipant entity) {
         return new ConversationParticipantDTO(entity.getId(), entity.getConversationId(), entity.getUserId());
+    }
+
+    public static MessageDTO mapToMessageDTO(Message message) {
+        MessageDTO dto = new MessageDTO();
+        dto.setId(message.getId());
+        dto.setConversationId(message.getConversationId());
+        dto.setSenderId(message.getSenderId());
+        dto.setReceiverId(message.getReceiverId());
+        dto.setContent(message.getContent());
+        dto.setMediaId(message.getMediaId());
+        dto.setMessageStatus(message.getMessageStatus());
+        ;
+        dto.setSentAt(message.getSentAt());
+        return dto;
+    }
+
+    public static Message mapToMessageEntity(MessageDTO dto) {
+        Message message = new Message();
+        message.setId(RandomUUIDGenerater.getId(Message.ALIAS_MESSAGE).toString());
+        message.setConversationId(dto.getConversationId());
+        message.setSenderId(dto.getSenderId());
+        message.setReceiverId(dto.getReceiverId());
+        message.setContent(dto.getContent());
+        message.setMediaId(dto.getMediaId());
+        message.setMessageStatus(dto.getMessageStatus());
+        return message;
     }
 }

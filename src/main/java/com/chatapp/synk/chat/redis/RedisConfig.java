@@ -1,5 +1,7 @@
-package com.chatapp.synk.config;
+package com.chatapp.synk.chat.redis;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -25,61 +27,55 @@ import java.time.Duration;
  */
 @Configuration
 @EnableCaching
-public class CacheConfig {
+public class RedisConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisConfig.class);
 
     /**
      * Creates a CacheManager bean that uses Redis as the caching provider.
-     *
-     * @param connectionFactory the RedisConnectionFactory to use for creating the CacheManager.
-     * @return a CacheManager configured with RedisCacheManager.
      */
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        return RedisCacheManager.builder(connectionFactory).cacheDefaults(redisCacheConfiguration())//after defining the default cache configuration.redisCacheConfiguration is our bean method
+        logger.info("Creating Redis CacheManager with custom default configuration.");
+        return RedisCacheManager
+                .builder(connectionFactory)
+                .cacheDefaults(redisCacheConfiguration()) // after defining the default cache configuration
                 .build();
     }
 
     /**
      * Creates the default cache configuration for Redis.
-     *
-     * @return a RedisCacheConfiguration with a TTL of 5 minutes,
      */
     @Bean
     public RedisCacheConfiguration redisCacheConfiguration() {
+        logger.debug("Defining default RedisCacheConfiguration with TTL of 5 minutes and JSON serialization.");
         return RedisCacheConfiguration
                 .defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5)) // TTL for cache entries
                 .disableCachingNullValues()
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer())
+                );
     }
 
     /**
-     * Why You Should Define It
-     * By default, Spring Boot autoconfigures a RedisTemplate<String, Object> if you have Redis on your classpath.
-     * However, the default serialization it uses is JDK serialization, which:
-     * Is not human-readable
-     * May throw exceptions if types are not Serializable
-     * Is not compatible with GenericJackson2JsonRedisSerializer you’re using in your cache
-     * So, to align your RedisTemplate with your cache settings, you should define:
-     *
-     * @param connectionFactory the RedisConnectionFactory to use for creating the RedisTemplate.
-     * @return a RedisTemplate configured with String keys and Object values,
+     * Custom RedisTemplate bean to align with JSON serializer.
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        logger.info("Creating custom RedisTemplate with JSON value serializer.");
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
         // Use same serializer as cache for consistency
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
-
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
+        logger.debug("RedisTemplate initialized with String key serializer and JSON value serializer.");
         return template;
     }
-
 }

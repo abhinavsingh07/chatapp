@@ -166,7 +166,7 @@ public class ContactServiceImpl implements ContactService {
     private void updateEmailStatus(String contactId, EmailStatus status) {
         contactRepository.findById(contactId).ifPresent(contact -> {
             contact.setEmailStatus(status);
-            contact.setContactStatus(ContactStatus.ADDED);
+            //contact.setContactStatus(ContactStatus.ADDED);
             contactRepository.save(contact);
         });
     }

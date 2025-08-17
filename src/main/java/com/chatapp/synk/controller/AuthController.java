@@ -54,9 +54,9 @@ public class AuthController {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", user.getAuthorities().stream().map(authObj -> authObj.getAuthority()).collect(Collectors.toList()));
         claims.put("id", user.getId());
-        claims.put("name", user.getName());
+        //claims.put("name", user.getName());
         claims.put("email", user.getEmail());
-        claims.put("profilePictureUrl", user.getProfilePictureUrl());
+       // claims.put("profilePictureUrl", user.getProfilePictureUrl());
 
         // Generate JWT token
         String token = jwtUtil.generateToken(claims, user.getUsername());
