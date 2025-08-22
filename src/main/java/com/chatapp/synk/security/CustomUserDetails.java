@@ -48,7 +48,7 @@ public class CustomUserDetails implements UserDetails {
     }
 
     //this is using in test
-    public CustomUserDetails(String username, String name, String email, String userRole, String profilePictureUrl) {
+    public CustomUserDetails(String username, String name, String email, String userRole, String profilePictureUrl,Collection<? extends GrantedAuthority> authorities) {
         this.username = username;
         this.name = name;
         this.email = email;

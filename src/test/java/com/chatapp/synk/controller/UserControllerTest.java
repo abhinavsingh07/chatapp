@@ -1,90 +1,106 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.security.JwtAuthFilter;
+import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.*;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = UserController.class, excludeFilters = {
-        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)// disables Spring Security filters
-})
-@AutoConfigureMockMvc(addFilters = false) // disables Spring Security filters
-@Import(UserControllerTest.TestConfig.class)
-public class UserControllerTest {
+@ExtendWith(MockitoExtension.class)
+class UserControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Mock
+    private UserService userService;
 
-    @Autowired
-    private UserService userService; // This is now injected from TestConfig
+    @InjectMocks
+    private UserController userController;
 
-    private UserDTO sampleUser;
+    private UserDTO mockUser;
 
     @BeforeEach
-    public void setup() {
-        Mockito.reset(userService); // Reset mock before each test
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999","abc@xyz.com", "password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
-    }
-
-
-    @Test
-    public void testGetUserById_found() throws Exception {
-        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(sampleUser);
-
-        mockMvc.perform(get("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"));
+    void setUp() {
+        mockUser = new UserDTO();
+        mockUser.setId("1");
+        mockUser.setName("John Doe");
+        mockUser.setEmail("john@example.com");
     }
 
     @Test
-    public void testGetUserById_notFound() throws Exception {
-        when(userService.getUserById("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER")).thenReturn(null);
+    void testGetAllUsers_whenUsersExist() {
+        when(userService.getAllUsers()).thenReturn(List.of(mockUser));
 
-        mockMvc.perform(get("/api/users/99"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.responseCode").value("404"))
-                .andExpect(jsonPath("$.data").isEmpty());
+        ResponseEntity<SuccessResponse<UserDTO>> response = userController.getAllUsers();
+
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals(1, response.getBody().getData().size());
+        assertEquals("John Doe", response.getBody().getData().get(0).getName());
     }
 
     @Test
-    public void testDeleteUser() throws Exception {
-        doNothing().when(userService).deleteUser("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER");
+    void testGetAllUsers_whenNoUsersExist() {
+        when(userService.getAllUsers()).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(delete("/api/users/8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User deleted successfully"));
+        ResponseEntity<SuccessResponse<UserDTO>> response = userController.getAllUsers();
+
+        assertEquals("404", response.getBody().getResponseCode());
+        assertTrue(response.getBody().getData().isEmpty());
     }
 
-    @TestConfiguration
-    static class TestConfig {
+    @Test
+    void testGetUserById_whenUserExists() {
+        when(userService.getUserById("1")).thenReturn(mockUser);
 
-        @Bean(name = "userRepository")
-        @Primary
-        public UserRepository userRepository() {
-            return mock(UserRepository.class);
-        }
+        ResponseEntity<SuccessResponse<UserDTO>> response = userController.getUserById("1");
 
-        @Bean(name = "userService")
-        //giving name beacuse when test loads it picks actual bean to pick mock one giving name
-        @Primary
-        public UserService userService() {
-            return mock(UserService.class);
-        }
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals("John Doe", response.getBody().getData().get(0).getName());
+    }
 
+    @Test
+    void testGetUserById_whenUserNotFound() {
+        when(userService.getUserById("99")).thenReturn(null);
+
+        ResponseEntity<SuccessResponse<UserDTO>> response = userController.getUserById("99");
+
+        assertEquals("404", response.getBody().getResponseCode());
+        assertTrue(response.getBody().getData().isEmpty());
+    }
+
+    @Test
+    void testUpdateUser() {
+        UserDTO updatedUser = new UserDTO();
+        updatedUser.setId("1");
+        updatedUser.setName("Updated Name");
+        updatedUser.setEmail("updated@example.com");
+
+        when(userService.updateUser("1", mockUser)).thenReturn(updatedUser);
+
+        ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("1", mockUser);
+
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals("Updated Name", response.getBody().getData().get(0).getName());
+    }
+
+    @Test
+    void testDeleteUser() {
+        doNothing().when(userService).deleteUser("1");
+
+        ResponseEntity<SuccessResponse<Void>> response = userController.deleteUser("1");
+
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals("User deleted successfully", response.getBody().getMessage());
+        verify(userService, times(1)).deleteUser("1");
     }
 }

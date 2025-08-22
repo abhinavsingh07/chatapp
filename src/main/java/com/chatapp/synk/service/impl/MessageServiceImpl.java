@@ -9,7 +9,6 @@ import com.chatapp.synk.util.Mapper;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +19,11 @@ import java.util.stream.Collectors;
 public class MessageServiceImpl implements MessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageServiceImpl.class);
+    private final MessageRepository messageRepository;
 
-    @Autowired
-    private MessageRepository messageRepository;
+    public MessageServiceImpl(MessageRepository messageRepository) {
+        this.messageRepository = messageRepository;
+    }
 
     @Override
     public List<MessageDTO> getMessagesByConversationId(String conversationId) {
@@ -40,7 +41,7 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public MessageDTO createMessage(MessageDTO messageDTO) {
-        logger.info("Sending message from {} to {}", messageDTO.getSenderId(), messageDTO.getReceiverId());
+        logger.info("Saving message from {} to {}", messageDTO.getSenderId(), messageDTO.getReceiverId());
         Message message = Mapper.mapToMessageEntity(messageDTO);
         Message saved = messageRepository.save(message);
         return Mapper.mapToMessageDTO(saved);

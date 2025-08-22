@@ -21,40 +21,42 @@ public class RedisSessionStore {
     }
 
     public void saveUserSession(String userId, String serverId, String wsSessionId) {
-        String key = ChatUtil.buildUserKey(userId);
+        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
 
         Map<String, Object> map = new HashMap<>();
         map.put("serverId", serverId);
         map.put("sessionId", wsSessionId);
 
-        redisTemplate.opsForHash().putAll(key, map);
+        redisTemplate.opsForHash().putAll(redisLookupKey, map);
         logger.info("Saved session for userId={} with serverId={} and sessionId={}", userId, serverId, wsSessionId);
     }
 
     public Map<Object, Object> getUserSession(String userId) {
-        String key = ChatUtil.buildUserKey(userId);
-        Map<Object, Object> sessionData = redisTemplate.opsForHash().entries(key);
+        String redisLookupKey = ChatUtil.buildUserKey(userId);
+        Map<Object, Object> sessionData = redisTemplate.opsForHash().entries(redisLookupKey);
         logger.debug("Fetched session data for userId={}: {}", userId, sessionData);
         return sessionData;
     }
 
     public String getUserServerId(String userId) {
-        Object v = redisTemplate.opsForHash().get(ChatUtil.buildUserKey(userId), "serverId");
+        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        Object v = redisTemplate.opsForHash().get(redisLookupKey, "serverId");
         String serverId = v != null ? v.toString() : null;
         logger.debug("Lookup serverId for userId={} -> {}", userId, serverId);
         return serverId;
     }
 
     public String getUserSessionId(String userId) {
-        Object v = redisTemplate.opsForHash().get(ChatUtil.buildUserKey(userId), "sessionId");
+        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        Object v = redisTemplate.opsForHash().get(redisLookupKey, "sessionId");
         String sessionId = v != null ? v.toString() : null;
         logger.debug("Lookup sessionId for userId={} -> {}", userId, sessionId);
         return sessionId;
     }
 
     public void deleteUserSession(String userId) {
-        String key = ChatUtil.buildUserKey(userId);
-        redisTemplate.delete(key);
-        logger.info("Deleted session for userId={} with key={}", userId, key);
+        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        redisTemplate.delete(redisLookupKey);
+        logger.info("Deleted session for userId={} with redisLookupKey={}", userId, redisLookupKey);
     }
 }

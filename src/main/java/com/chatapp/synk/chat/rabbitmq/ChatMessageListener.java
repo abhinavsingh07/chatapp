@@ -24,16 +24,6 @@ public class ChatMessageListener {
         this.redisSessionStore = redisSessionStore;
     }
 
-
-    /**
-     * What’s Happening Here
-     *
-     * @param payload
-     * @RabbitListener → tells Spring AMQP that this method should consume messages from a queue.
-     * queues = "#{serverQueue.name}" → uses Spring Expression Language (SpEL) to dynamically resolve the queue name at runtime.
-     * serverQueue → refers to a Spring bean in your configuration (of type Queue).
-     * .name → calls the getName() method on that bean (all Queue objects have a name).
-     */
     @RabbitListener(queues = "#{serverQueue.name}")
     public void onMessage(String payload) {
         logger.debug("Received message payload: {}", payload);

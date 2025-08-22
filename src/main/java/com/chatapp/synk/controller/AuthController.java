@@ -9,7 +9,6 @@ import com.chatapp.synk.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -28,20 +27,22 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
-
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
     private AuthenticationManager authenticationManager;
 
-    @Autowired
     private JwtUtil jwtUtil;
 
-    @Autowired
     private CustomUserDetailsService userDetailsService;
 
-    @Autowired
     private UserService userService;
+
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, CustomUserDetailsService userDetailsService, UserService userService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+        this.userService = userService;
+    }
 
     @PostMapping("/authenticate")
     public ResponseEntity<JwtResponse> authenticate(@Valid @RequestBody AuthDTO authDTO) throws ServiceException {
@@ -56,12 +57,12 @@ public class AuthController {
         claims.put("id", user.getId());
         //claims.put("name", user.getName());
         claims.put("email", user.getEmail());
-       // claims.put("profilePictureUrl", user.getProfilePictureUrl());
+        // claims.put("profilePictureUrl", user.getProfilePictureUrl());
 
         // Generate JWT token
         String token = jwtUtil.generateToken(claims, user.getUsername());
         logger.info("JWT token generated successfully for user: {}", authDTO.getPhoneNumberOrEmail());
-        return ResponseEntity.ok(new JwtResponse(token,user.getEmail(), user.getName(), user.getUserRoles(), user.getEmail(), user.getProfilePictureUrl(), user.getId()));
+        return ResponseEntity.ok(new JwtResponse(token, user.getEmail(), user.getName(), user.getUserRoles(), user.getEmail(), user.getProfilePictureUrl(), user.getId()));
     }
 
     private Authentication authenticate(String username, String password) throws ServiceException {

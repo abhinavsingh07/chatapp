@@ -13,22 +13,20 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
-    private final ChatWebSocketHandler chatHandler;
+    private final ChatWebSocketHandler chatWebSocketHandler;
     private final WebSocketAuthHandshakeInterceptor authInterceptor;
 
     public WebSocketConfig(ChatWebSocketHandler chatHandler, WebSocketAuthHandshakeInterceptor authInterceptor) {
-        this.chatHandler = chatHandler;
+        this.chatWebSocketHandler = chatHandler;
         this.authInterceptor = authInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         logger.info("Registering WebSocket handler at endpoint: /ws/chat");
-        registry.addHandler(chatHandler, "/ws/chat")
+        registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(authInterceptor)
                 .setAllowedOrigins("*");
-        logger.debug("WebSocket handler [{}] with interceptor [{}] successfully registered.",
-                chatHandler.getClass().getSimpleName(),
-                authInterceptor.getClass().getSimpleName());
+        logger.debug("WebSocket handler [{}] with interceptor [{}] successfully registered.", chatWebSocketHandler.getClass().getSimpleName(), authInterceptor.getClass().getSimpleName());
     }
 }

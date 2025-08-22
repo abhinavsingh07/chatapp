@@ -62,7 +62,7 @@ public class WebSocketAuthHandshakeInterceptor implements HandshakeInterceptor {
         // 4) Extract user id from token and store for WebSocket handler
         String userId = jwtUtil.extractId(token);
         attributes.put("userId", userId);//store in WebSocketSession,In chatEbscpketHandler it is using as session.getAttributes().get("userId");
-        attributes.put("authToken", token);//store in WebSocketSession
+        attributes.put("authToken", token);//store in WebSocketSession,example in ChatWebSocketHandler it is fetching userid from ws session it remians for whole session
         logger.info("Handshake authorized: userId={} connected successfully.", userId);
         return true;
     }

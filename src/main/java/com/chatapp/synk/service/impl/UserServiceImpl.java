@@ -16,8 +16,6 @@ import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.StringUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,21 +33,19 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ContactRepository contactRepository;
+    private final UserRoleRepository userRoleRepository;
 
-    @Autowired
-    public PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private CacheManager cacheManager;
-    @Autowired
-    private ContactRepository contactRepository;
-    @Autowired
-    private UserRoleRepository userRoleRepository;
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, ContactRepository contactRepository, UserRoleRepository userRoleRepository) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.contactRepository = contactRepository;
+        this.userRoleRepository = userRoleRepository;
+    }
 
     //id is userId
-
     @Override
     @Cacheable(value = "userListCache", key = "'allUsers'", unless = "#result == null or #result.isEmpty()")
     public List<UserDTO> getAllUsers() {
@@ -114,8 +110,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional//Now the entire flow, including saving user and updating contacts, happens in a single transaction.
-    @Caching(put = {@CachePut(value = "userCache", key = "#result.id", unless = "#result == null")},
-            evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
+    @Caching(put = {@CachePut(value = "userCache", key = "#result.id", unless = "#result == null")}, evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
     public UserDTO createUser(UserDTO userDTO) {
         logger.info("Creating new user with phone: {}", userDTO.getPhoneNumber());
         try {
@@ -151,8 +146,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    @Caching(put = {@CachePut(value = "userCache", key = "#userId", unless = "#result == null")},
-            evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
+    @Caching(put = {@CachePut(value = "userCache", key = "#userId", unless = "#result == null")}, evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
     public UserDTO updateUser(String userId, UserDTO userDTO) {
         logger.info("Updating user with ID: {}", userId);
 
@@ -178,8 +172,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "userCache", key = "#userId"),      // evict single user
+    @Caching(evict = {@CacheEvict(value = "userCache", key = "#userId"),      // evict single user
             @CacheEvict(value = "userListCache", key = "'allUsers'") // evict cached user list
     })
     public void deleteUser(String userId) {

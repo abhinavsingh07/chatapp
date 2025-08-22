@@ -6,7 +6,6 @@ import com.chatapp.synk.service.MessageService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,11 +15,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/messages")
 public class MessageController {
-
     private static final Logger logger = LoggerFactory.getLogger(MessageController.class);
+    private final MessageService messageService;
 
-    @Autowired
-    private MessageService messageService;
+    public MessageController(MessageService messageService) {
+        this.messageService = messageService;
+    }
 
     @GetMapping("/conversation/{conversationId}")
     public ResponseEntity<SuccessResponse<MessageDTO>> getMessagesByConversationId(@PathVariable String conversationId) {

@@ -16,7 +16,6 @@ import com.chatapp.synk.util.AppUtils;
 import com.chatapp.synk.util.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
@@ -37,18 +36,23 @@ import java.util.stream.Collectors;
 @Service
 public class ContactServiceImpl implements ContactService {
     private static final Logger logger = LoggerFactory.getLogger(ContactServiceImpl.class);
-    @Autowired
-    private ContactRepository contactRepository;
+    private final ContactRepository contactRepository;
 
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private CacheManager cacheManager;
+    private final UserService userService;
 
-    @Autowired
-    private EmailService emailService;
-    @Autowired
-    private ExecutorService taskExecutor;
+    private final CacheManager cacheManager;
+
+    private final EmailService emailService;
+
+    private final ExecutorService taskExecutor;
+
+    public ContactServiceImpl(ContactRepository contactRepository, UserService userService, CacheManager cacheManager, EmailService emailService, ExecutorService taskExecutor) {
+        this.contactRepository = contactRepository;
+        this.userService = userService;
+        this.cacheManager = cacheManager;
+        this.emailService = emailService;
+        this.taskExecutor = taskExecutor;
+    }
 
     @Override
     @Cacheable(value = "contactListCache", key = "#userId", unless = "#result == null || #result.isEmpty()")
@@ -97,10 +101,7 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "contactListCache", key = "#contactDTO.userId"),
-            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'")},
-            put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
+    @Caching(evict = {@CacheEvict(value = "contactListCache", key = "#contactDTO.userId"), @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'")}, put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
     public ContactDTO addContact(ContactDTO dto) {
         String userId = dto.getUserId();
         String email = dto.getEmail();

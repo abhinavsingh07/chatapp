@@ -7,7 +7,6 @@ import com.chatapp.synk.service.ConversationParticipantService;
 import com.chatapp.synk.util.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,8 +21,11 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
 
     private static final Logger logger = LoggerFactory.getLogger(ConversationParticipantServiceImpl.class);
 
-    @Autowired
-    private ConversationParticipantRepository repository;
+    private final ConversationParticipantRepository repository;
+
+    public ConversationParticipantServiceImpl(ConversationParticipantRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     @CachePut(value = "participantCache", key = "#result.id")
@@ -61,7 +63,7 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     public void deleteByConversationid(String id) {
         logger.info("Removing all conversation participants with conversation ID: {}", id);
         List<ConversationParticipant> list = repository.findByConversationId(id.trim());
-        for(ConversationParticipant cp:list) {
+        for (ConversationParticipant cp : list) {
             repository.deleteById(cp.getId());
         }
     }

@@ -9,7 +9,6 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +22,6 @@ public class ChatMessagePublisher {
 
     private final LocalWsSessionRegistry localWsSessionRegistryRegistry;
 
-    @Autowired
     public ChatMessagePublisher(RabbitTemplate rabbitTemplate, RedisTemplate<String, Object> redisTemplate, LocalWsSessionRegistry localWsSessionRegistryRegistry) {
         this.rabbitTemplate = rabbitTemplate;
         this.redisTemplate = redisTemplate;

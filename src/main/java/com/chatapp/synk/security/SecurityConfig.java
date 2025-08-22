@@ -1,6 +1,5 @@
 package com.chatapp.synk.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,27 +14,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
-
-    @Autowired
-    private PhoneNumberAuthenticationProvider phoneNumberAuthProvider;
-
-    //    @Bean
-//    public AuthenticationProvider authenticationProvider() {
-//        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-//        provider.setUserDetailsService(userDetailsService);
-//        provider.setPasswordEncoder(passwordEncoder());
-//        return provider;
-//    }
-
-
-//    @Bean
-//    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-//        return config.getAuthenticationManager();
-//    }
-
+    private final JwtAuthFilter jwtAuthFilter;
+    private final PhoneNumberAuthenticationProvider phoneNumberAuthProvider;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, PhoneNumberAuthenticationProvider phoneNumberAuthProvider) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.phoneNumberAuthProvider = phoneNumberAuthProvider;
+    }
 
     //set the user details service and password encoder for the custom authentication provider
     //passes in security filter chain method.
@@ -43,7 +27,6 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         return phoneNumberAuthProvider; // use the instance Spring knows about
     }
-
 
     //we need to register our custom provider to authenticationManager
     @Bean
@@ -53,16 +36,14 @@ public class SecurityConfig {
         return builder.build();
     }
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/authenticate", "/auth/register")
-                        .permitAll().anyRequest().authenticated())
+                .authorizeHttpRequests(auth ->
+                        auth.requestMatchers("/auth/authenticate", "/auth/register", "/ws/chat").permitAll()
+                        .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
-
 }

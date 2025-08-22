@@ -6,7 +6,6 @@ import com.chatapp.synk.service.ConversationParticipantService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +16,11 @@ import java.util.List;
 @RequestMapping("/api/participants")
 public class ConversationParticipantController {
     private static final Logger logger = LoggerFactory.getLogger(ConversationParticipantController.class);
+    private final ConversationParticipantService participantService;
 
-    @Autowired
-    private ConversationParticipantService participantService;
+    public ConversationParticipantController(ConversationParticipantService participantService) {
+        this.participantService = participantService;
+    }
 
     @PostMapping
     public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> add(@Valid @RequestBody ConversationParticipantDTO dto) {

@@ -1,72 +1,128 @@
 package com.chatapp.synk.controller;
 
-import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.security.JwtAuthFilter;
+import com.chatapp.synk.dto.ContactDTO;
+import com.chatapp.synk.dto.ContactUserDTO;
+import com.chatapp.synk.enums.ContactStatus;
+import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.service.ContactService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.*;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Collections;
+import java.util.List;
 
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = ContactController.class, excludeFilters = {
-        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)
-})
-@AutoConfigureMockMvc(addFilters = false)
-@Import(ContactControllerTest.TestConfig.class)
-public class ContactControllerTest {
-    @Autowired
-    private MockMvc mockMvc;
+@ExtendWith(MockitoExtension.class)
+class ContactControllerTest {
 
-    @Autowired
+    @InjectMocks
+    private ContactController contactController;
+
+    @Mock
     private ContactService contactService;
 
-    private UserDTO sampleContact;
+    @Test
+    void testGetContacts_Found() {
+        // Arrange
+        String userId = "123";
+        ContactUserDTO contactUser = new ContactUserDTO();
+        contactUser.setContactId("1");
+        contactUser.setName("Alice");
 
-    @BeforeEach
-    public void setup() {
-        Mockito.reset(contactService);
-        //sampleContact = new UserDTO("456_CONT", "userphone", "useremail","userpassword", "User Name", "http://example.com/profile.jpg", "About User");
+        when(contactService.getContacts(userId)).thenReturn(List.of(contactUser));
+
+        // Act
+        ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts(userId);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals(1, response.getBody().getData().size());
+        assertEquals("Alice", response.getBody().getData().get(0).getName());
     }
 
     @Test
-    public void testGetContactById_found() throws Exception {
-        //when(contactService.getContactsByUserId("456_CONT")).thenReturn(Arrays.asList(sampleContact));
+    void testGetContacts_NotFound() {
+        // Arrange
+        String userId = "123";
+        when(contactService.getContacts(userId)).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/contacts/456_CONT"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value("456_CONT"));
+        // Act
+        ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts(userId);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("404", response.getBody().getResponseCode());
+        assertEquals("No contacts found", response.getBody().getMessage());
+        assertEquals(0, response.getBody().getData().size());
     }
 
     @Test
-    public void testGetContactById_notFound() throws Exception {
-        when(contactService.getContactsByUserId("456_CONT")).thenReturn(Collections.emptyList());
+    void testAddContact_Added() {
+        // Arrange
+        ContactDTO inputContact = new ContactDTO();
+        inputContact.setId("1");
+        inputContact.setEmail("Bob");
 
-        mockMvc.perform(get("/api/contacts/456_CONT"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.responseCode").value("404"))
-                .andExpect(jsonPath("$.data").isArray());
+        ContactDTO savedContact = new ContactDTO();
+        savedContact.setId("1");
+        savedContact.setEmail("Bob");
+        savedContact.setContactStatus(ContactStatus.ADDED);
+
+        when(contactService.addContact(any(ContactDTO.class))).thenReturn(savedContact);
+
+        // Act
+        ResponseEntity<SuccessResponse<ContactDTO>> response = contactController.addContact(inputContact);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals("Contact created successfully", response.getBody().getMessage());
+        assertEquals("Bob", response.getBody().getData().get(0).getEmail());
     }
 
-    @TestConfiguration
-    static class TestConfig {
+    @Test
+    void testAddContact_Invited() {
+        // Arrange
+        ContactDTO inputContact = new ContactDTO();
+        inputContact.setId("2");
+        inputContact.setEmail("Charlie");
 
-        @Bean(name = "contactService")
-        @Primary
-        public ContactService contactService() {
-            return mock(ContactService.class);
-        }
+        ContactDTO savedContact = new ContactDTO();
+        savedContact.setId("2");
+        savedContact.setEmail("Charlie");
+        savedContact.setContactStatus(ContactStatus.INVITED);
+
+        when(contactService.addContact(any(ContactDTO.class))).thenReturn(savedContact);
+
+        // Act
+        ResponseEntity<SuccessResponse<ContactDTO>> response = contactController.addContact(inputContact);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("Invitation sent successfully", response.getBody().getMessage());
+    }
+
+    @Test
+    void testDeleteContact() {
+        // Arrange
+        String contactId = "1";
+        doNothing().when(contactService).deleteContact(contactId);
+
+        // Act
+        ResponseEntity<SuccessResponse<String>> response = contactController.deleteContact(contactId);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("200", response.getBody().getResponseCode());
+        assertEquals("Contact deleted successfully", response.getBody().getMessage());
     }
 }

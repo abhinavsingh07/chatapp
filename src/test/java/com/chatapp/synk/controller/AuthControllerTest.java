@@ -2,142 +2,111 @@ package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.security.CustomUserDetails;
-import com.chatapp.synk.security.CustomUserDetailsService;
+import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.*;
 import com.chatapp.synk.service.UserService;
-import com.chatapp.synk.security.JwtUtil;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false) // disables Spring Security filters
-@Import(AuthControllerTest.TestConfig.class)
-public class AuthControllerTest {
+@ExtendWith(MockitoExtension.class)
+class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @InjectMocks
+    private AuthController authController;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;  // This is now injected from TestConfig
+    @Mock
+    private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private JwtUtil jwtUtil;  // This is now injected from TestConfig
-    @Autowired
-    private UserRepository userRepository; // This is now injected from TestConfig
-    @Autowired
-    private CustomUserDetailsService userDetailsService;  // This is now injected from TestConfig
+    @Mock
+    private JwtUtil jwtUtil;
 
-    @Autowired
-    private UserService userService;  // This is now injected from TestConfig
-    private UserDTO sampleUser;
+    @Mock
+    private CustomUserDetailsService userDetailsService;
 
-    @BeforeEach
-    void setUp() {
-        Mockito.reset(authenticationManager, jwtUtil, userDetailsService, userService);
-        sampleUser = new UserDTO("8dc2c03d-b35a-4b9a-a212-b1d4a20dc56a_USER", "9999999999", "abc@xyz.com", "password", "Abhinav", "https://example.com/pic.jpg", "Backend Dev");
+    @Mock
+    private UserService userService;
+
+    @Test
+    void testAuthenticate_Success() throws Exception {
+
+        // Arrange
+        AuthDTO authDTO = new AuthDTO();
+        authDTO.setPhoneNumberOrEmail("test@example.com");
+        authDTO.setPassword("password123");
+
+        CustomUserDetails realUser = new CustomUserDetails("test@example.com", "Test User", "password123", List.of(new SimpleGrantedAuthority("ROLE_USER")), "test@example.com", "http://example.com/profile.jpg", "12345");
+        Authentication mockAuth = new PhoneNumberAuthenticationToken(realUser, "password123", realUser.getAuthorities());
+        when(authenticationManager.authenticate(any())).thenReturn(mockAuth);
+        when(jwtUtil.generateToken(Mockito.any(Map.class), Mockito.eq("test@example.com"))).thenReturn("mocked-jwt-token");
+
+        // Act
+        ResponseEntity<JwtResponse> response = authController.authenticate(authDTO);
+
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("mocked-jwt-token", response.getBody().getJwtToken());
+        assertEquals("Test User", response.getBody().getName());
+        assertEquals("test@example.com", response.getBody().getEmail());
     }
 
     @Test
-    void testAuthenticate() throws Exception {
-        String phoneNumber = "1234567890";
-        String name = "testuser";
-        String email = "testemail";
-        String profilePictureUrl = "testprofilePictureUrl";
-        String password = "testpassword";
-        String userRole= "ROLE_USER";
-        String mockToken= "mockToken";
+    void testRegisterUser_Success() {
+        // Arrange
+        UserDTO inputUser = new UserDTO();
+        inputUser.setId("12345");
+        inputUser.setPhoneNumber("9999999999");
+        inputUser.setEmail("test@example.com");
+        inputUser.setPassword("secret");
 
-        // Create a sample AuthDTO request
-        AuthDTO request = new AuthDTO();
-        request.setPhoneNumberOrEmail(phoneNumber);
-        request.setPassword(password);
+        UserDTO savedUser = new UserDTO();
+        savedUser.setId("12345");
+        savedUser.setPhoneNumber("9999999999");
+        savedUser.setEmail("test@example.com");
+        savedUser.setPassword("secret");
 
-        CustomUserDetails mockUserDetails = new CustomUserDetails(phoneNumber, name, email, userRole, profilePictureUrl);
+        when(userService.createUser(inputUser)).thenReturn(savedUser);
 
-        when(userDetailsService.loadUserByUsername(request.getPhoneNumberOrEmail())).thenReturn(mockUserDetails);
-        //when(jwtUtil.generateToken(mockUserDetails)).thenReturn(mockToken);
+        // Act
+        ResponseEntity<SuccessResponse<UserDTO>> response = authController.createUser(inputUser);
 
-        mockMvc.perform(post("/auth/authenticate")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phoneNumberOrEmail\": \"" + phoneNumber + "\"}"))
-                .andExpect(status().isOk())
-                //.andExpect(jsonPath("$.expiry").value(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))) to do
-                .andExpect(jsonPath("$.jwtToken").value(mockToken))
-                .andExpect(jsonPath("$.username").value(phoneNumber))
-                .andExpect(jsonPath("$.name").value(name))
-                .andExpect(jsonPath("$.roles").value(userRole))
-                .andExpect(jsonPath("$.email").value(email))
-                .andExpect(jsonPath("$.profilePictureUrl").value(profilePictureUrl));
-
+        // Assert
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("200", response.getBody().getResponseCode().toString());
+        assertEquals(1, response.getBody().getData().size());
+        assertEquals("********", response.getBody().getData().get(0).getPassword()); // masked
     }
 
     @Test
-    public void testCreateUser() throws Exception {
-        when(userService.createUser(any(UserDTO.class))).thenReturn(sampleUser);
+    void testRegisterUser_Failure() {
+        // Arrange
+        UserDTO inputUser = new UserDTO();
+        inputUser.setPhoneNumber("9999999999");
+        inputUser.setEmail("test@example.com");
 
-        String jsonInput = """
-                {
-                  "phoneNumber": "9999999999",
-                  "name": "Abhinav",
-                  "email":"abc@xyz.com",
-                  "password":"hello",
-                  "profilePictureUrl": "https://example.com/pic.jpg",
-                  "about": "Backend Dev"
-                }
-                """;
+        when(userService.createUser(inputUser)).thenThrow(new RuntimeException("DB error"));
 
-        mockMvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content(jsonInput)).andExpect(status().isOk()).andExpect(jsonPath("$.responseCode").value("200")).andExpect(jsonPath("$.message").value("User created successfully")).andExpect(jsonPath("$.data[0].name").value("Abhinav"));
-    }
+        // Act
+        ResponseEntity<SuccessResponse<UserDTO>> response = authController.createUser(inputUser);
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean(name = "authenticationManager")
-        @Primary
-        public AuthenticationManager authenticationManager() {
-            return mock(AuthenticationManager.class);
-        }
-
-        @Bean(name = "jwtUtil")
-        @Primary
-        public JwtUtil jwtUtil() {
-            return mock(JwtUtil.class);
-        }
-
-        @Bean(name = "userRepository")
-        @Primary
-        public UserRepository userRepository() {
-            return mock(UserRepository.class);
-        }
-
-        @Bean(name = "userDetailsService")
-        @Primary
-        public CustomUserDetailsService userDetailsService() {
-            return mock(CustomUserDetailsService.class);
-        }
-
-        @Bean(name = "userService")
-        @Primary
-        public UserService userService() {
-            return mock(UserService.class);
-        }
+        // Assert
+        assertEquals(500, response.getStatusCodeValue());
+        assertEquals("500", response.getBody().getResponseCode().toString());
+        assertTrue(response.getBody().getData().isEmpty());
     }
 }

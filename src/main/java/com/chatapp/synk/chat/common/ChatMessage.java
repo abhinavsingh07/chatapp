@@ -1,10 +1,15 @@
 package com.chatapp.synk.chat.common;
 
+import com.chatapp.synk.enums.ChatWebSocketStatus;
+
 public class ChatMessage {
+
+    private ChatWebSocketStatus wsStatus;
     private String conversationId;
     private String fromUserId;
     private String toUserId;
     private String body;
+    private String sentAt;
 
     public ChatMessage() {
     }
@@ -46,5 +51,21 @@ public class ChatMessage {
 
     public void setConversationId(String conversationId) {
         this.conversationId = conversationId;
+    }
+
+    public ChatWebSocketStatus getWsStatus() {
+        return wsStatus;
+    }
+
+    public void setWsStatus(ChatWebSocketStatus wsStatus) {
+        this.wsStatus = wsStatus;
+    }
+
+    public String getSentAt() {
+        return sentAt;
+    }
+
+    public void setSentAt(String sentAt) {
+        this.sentAt = sentAt;
     }
 }

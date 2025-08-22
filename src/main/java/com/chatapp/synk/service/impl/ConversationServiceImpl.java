@@ -11,7 +11,6 @@ import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.RandomUUIDGenerater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -27,14 +26,17 @@ import java.util.stream.Collectors;
 public class ConversationServiceImpl implements ConversationService {
     private static final Logger logger = LoggerFactory.getLogger(ConversationServiceImpl.class);
 
-    @Autowired
-    private ConversationRepository conversationRepository;
-    @Autowired
-    private ConversationParticipantRepository participantRepository;
+    private final ConversationRepository conversationRepository;
+
+    private final ConversationParticipantRepository participantRepository;
+
+    public ConversationServiceImpl(ConversationRepository conversationRepository, ConversationParticipantRepository participantRepository) {
+        this.conversationRepository = conversationRepository;
+        this.participantRepository = participantRepository;
+    }
 
     @Override
-    @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")},
-            evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'")})
+    @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")}, evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'")})
     public ConversationDTO createConversation(ConversationDTO dto) {
         logger.info("Creating new conversation");
         Conversation entity = Mapper.mapToConversationEntity(dto);
@@ -83,9 +85,7 @@ public class ConversationServiceImpl implements ConversationService {
         logger.info("Created new conversation [{}] between [{}] and [{}]", newConversationId, loggedInUserId, contactUserId);
 
         // Add both participants
-        List<ConversationParticipant> participants = List.of(
-                new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, loggedInUserId.trim()),
-                new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, contactUserId.trim()));
+        List<ConversationParticipant> participants = List.of(new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, loggedInUserId.trim()), new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, contactUserId.trim()));
 
         participantRepository.saveAll(participants);
         logger.info("Added participants [{}] and [{}] to conversation [{}]", loggedInUserId, contactUserId, newConversationId);
