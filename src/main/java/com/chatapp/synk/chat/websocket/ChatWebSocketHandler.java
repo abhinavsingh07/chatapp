@@ -68,7 +68,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         logger.info("Received message from sessionId={} userId={} -> payload={}", wsSession.getId(), userId, payload);
         //we should cover this code in async task to dont block event loop of websocket which is using under the hood of websocket.
         try {
-            // Send invite asynchronously; it is non-blocking to WebSocket event loop under the hood.
+            // Save message plus publish to rabbitmq, it is non-blocking to WebSocket event loop under the hood.
             CompletableFuture.runAsync(() -> {
                 ChatMessage chatMessage;
                 try {

@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({ServiceException.class})
     public ResponseEntity<ErrorResponse> handleServiceException(ServiceException exception) {
-        logger.error("ServiceException occurred: {}", exception.getMessage());
+
         HttpStatus status = exception.getStatus() != null ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
         ErrorResponse errResp = new ErrorResponse();
         errResp.setErrorMessage(exception.getMessage());
@@ -41,17 +41,17 @@ public class GlobalExceptionHandler {
             errResp.setError(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-
+        logger.error("An ServiceException occurred: {}", exception.getMessage());
         return new ResponseEntity<>(errResp, status);
     }
 
-    @ExceptionHandler(Exception.class)
+    @ExceptionHandler(Exception.class)//catches Runtime Exception as well
     public ResponseEntity<ErrorResponse> handleOtherExceptions(Exception ex) {
         logger.error("Exception occured: {}",ex.getMessage());
         ErrorResponse errResp = new ErrorResponse();
         errResp.setResponseCode(HTTP_CODE_INTERNAL_SERVER_ERROR);
         errResp.setErrorMessage(ex.getMessage());
-        logger.error("An unexpected error occurred: {}", ex.getMessage(), ex);
+        logger.error("An unexpected Exception occurred: {}", ex.getMessage());
         return new ResponseEntity<>(errResp, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 

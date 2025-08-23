@@ -2,6 +2,8 @@ package com.chatapp.synk.service.impl;
 
 import com.api.emailservice.EmailDTO;
 import com.api.emailservice.EmailService;
+import com.chatapp.synk.chat.security_validator.InputSecurityUtils;
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.ContactDTO;
 import com.chatapp.synk.dto.ContactUserDTO;
 import com.chatapp.synk.dto.UserDTO;
@@ -12,7 +14,6 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.service.ContactService;
 import com.chatapp.synk.service.UserService;
-import com.chatapp.synk.util.AppUtils;
 import com.chatapp.synk.util.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -67,7 +67,8 @@ public class ContactServiceImpl implements ContactService {
     @Override
     @Cacheable(value = "contactListCache", key = "#userId != null && !#userId.isEmpty() ? #userId : 'ALL_CONTACTS'", unless = "#result == null || #result.isEmpty()")
     public List<ContactUserDTO> getContacts(String userId) {
-        if (userId != null && !userId.isEmpty()) {
+        String validId = InputSecurityUtils.secureId(userId);
+        if (validId != null && !validId.isEmpty()) {
             logger.info("Fetching contacts for userId: {}", userId);
             return contactRepository.findContactUserDetailsByUserId(userId.trim());
         } else {
@@ -80,8 +81,8 @@ public class ContactServiceImpl implements ContactService {
     @Caching(evict = {@CacheEvict(value = "contactCache", key = "#contactId")})
     public void deleteContact(String contactId) {
         logger.info("Attempting to delete contact with ID: {}", contactId);
-
-        Optional<Contact> contactOpt = contactRepository.findById(contactId.trim());
+        String validId = InputSecurityUtils.secureId(contactId);
+        Optional<Contact> contactOpt = contactRepository.findById(validId);
         if (contactOpt.isEmpty()) {
             logger.warn("No contact found with ID: {}", contactId);
             throw new ServiceException("Contact not found for given contact id", HttpStatus.NOT_FOUND);
@@ -103,17 +104,10 @@ public class ContactServiceImpl implements ContactService {
     @Override
     @Caching(evict = {@CacheEvict(value = "contactListCache", key = "#contactDTO.userId"), @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'")}, put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
     public ContactDTO addContact(ContactDTO dto) {
-        String userId = dto.getUserId();
-        String email = dto.getEmail();
+        ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
+        String userId = validDTO.getUserId();
+        String email = validDTO.getEmail();
         logger.info("Adding contact for userId={} by email={}", userId, email);
-
-        if (!StringUtils.hasText(userId) || !StringUtils.hasText(email)) {
-            throw new ServiceException("UserId and email are required", HttpStatus.BAD_REQUEST);
-        }
-
-        if (!AppUtils.isValidEmail(email)) {
-            throw new ServiceException("Invalid email format", HttpStatus.BAD_REQUEST);
-        }
 
         try {
             // Check if user exists for the given email

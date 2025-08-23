@@ -1,5 +1,7 @@
 package com.chatapp.synk.service.impl;
 
+import com.chatapp.synk.chat.security_validator.InputSecurityUtils;
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.ConversationDTO;
 import com.chatapp.synk.entity.Conversation;
 import com.chatapp.synk.entity.ConversationParticipant;
@@ -36,10 +38,12 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")}, evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'")})
+    @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")},
+            evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'")})
     public ConversationDTO createConversation(ConversationDTO dto) {
         logger.info("Creating new conversation");
-        Conversation entity = Mapper.mapToConversationEntity(dto);
+        ConversationDTO validTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
+        Conversation entity = Mapper.mapToConversationEntity(validTO);
         Conversation saved = conversationRepository.save(entity);
         logger.info("Conversation saved with ID: {}", saved.getId());
         return Mapper.mapToConversationDTO(saved);
@@ -49,7 +53,8 @@ public class ConversationServiceImpl implements ConversationService {
     @Cacheable(value = "conversationCache", key = "#id", unless = "#result == null")
     public ConversationDTO getConversationById(String id) {
         logger.info("Fetching conversation with ID: {}", id);
-        Optional<ConversationDTO> result = conversationRepository.findById(id.trim()).map(Mapper::mapToConversationDTO);
+        String validId = InputSecurityUtils.secureId(id);
+        Optional<ConversationDTO> result = conversationRepository.findById(validId).map(Mapper::mapToConversationDTO);
         if (result.isEmpty()) {
             logger.warn("No conversation found with ID: {}", id);
             return null;
@@ -69,12 +74,13 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional // ensures conversation + participants are saved atomically (rollback if anything fails).
     public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
         logger.info("Request to get or create conversation between [{}] and [{}]", loggedInUserId, contactUserId);
-
+        String loggedInUserValidId = InputSecurityUtils.secureId(loggedInUserId);
+        String contactUserValidId = InputSecurityUtils.secureId(contactUserId);
         // Try to find existing conversation
-        String conversationId = conversationRepository.findConversationIdByUserIdAndContactUserId(loggedInUserId.trim(), contactUserId.trim());
+        String conversationId = conversationRepository.findConversationIdByUserIdAndContactUserId(loggedInUserValidId, loggedInUserValidId);
 
         if (conversationId != null) {
-            logger.info("Existing conversation [{}] found between [{}] and [{}]", conversationId, loggedInUserId, contactUserId);
+            logger.info("Existing conversation [{}] found between [{}] and [{}]", conversationId, loggedInUserValidId, loggedInUserValidId);
             return conversationId; // Reuse existing
         }
 

@@ -1,5 +1,7 @@
 package com.chatapp.synk.service.impl;
 
+import com.chatapp.synk.chat.security_validator.InputSecurityUtils;
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.MessageDTO;
 import com.chatapp.synk.entity.Message;
 import com.chatapp.synk.exceptionHandler.ServiceException;
@@ -28,21 +30,29 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public List<MessageDTO> getMessagesByConversationId(String conversationId) {
         logger.info("Fetching messages for conversation: {}", conversationId);
-        return messageRepository.findByConversationIdOrderBySentAtAsc(conversationId.trim())
-                .stream().map(Mapper::mapToMessageDTO).collect(Collectors.toList());
+        String validId = InputSecurityUtils.secureId(conversationId);
+        return messageRepository.findByConversationIdOrderBySentAtAsc(validId)
+                .stream()
+                .map(Mapper::mapToMessageDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<MessageDTO> getUnreadMessagesForReceiver(String conversationId, String receiverId) {
         logger.info("Fetching unread messages for receiver: {}", receiverId);
-        return messageRepository.findByConversationIdAndReceiverId(conversationId.trim(),receiverId.trim())
-                .stream().map(Mapper::mapToMessageDTO).collect(Collectors.toList());
+        String receiverValidId = InputSecurityUtils.secureId(receiverId);
+        String conversationValidId = InputSecurityUtils.secureId(conversationId);
+        return messageRepository.findByConversationIdAndReceiverId(conversationValidId, receiverValidId)
+                .stream()
+                .map(Mapper::mapToMessageDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public MessageDTO createMessage(MessageDTO messageDTO) {
-        logger.info("Saving message from {} to {}", messageDTO.getSenderId(), messageDTO.getReceiverId());
-        Message message = Mapper.mapToMessageEntity(messageDTO);
+        MessageDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(messageDTO);
+        logger.info("Saving message from {} to {}", validDTO.getSenderId(), validDTO.getReceiverId());
+        Message message = Mapper.mapToMessageEntity(validDTO);
         Message saved = messageRepository.save(message);
         return Mapper.mapToMessageDTO(saved);
     }
@@ -51,7 +61,8 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public void markMessageAsRead(String messageId) {
         logger.info("Marking message as read. ID: {}", messageId);
-        Message message = messageRepository.findById(messageId.trim())
+        String validId = InputSecurityUtils.secureId(messageId);
+        Message message = messageRepository.findById(validId)
                 .orElseThrow(() -> new ServiceException("Message not found", HttpStatus.NOT_FOUND));
         //message.setIsRead(true);
         messageRepository.save(message);

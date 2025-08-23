@@ -1,5 +1,6 @@
 package com.chatapp.synk.controller;
 
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.exceptionHandler.ServiceException;
@@ -47,8 +48,9 @@ public class AuthController {
     @PostMapping("/authenticate")
     public ResponseEntity<JwtResponse> authenticate(@Valid @RequestBody AuthDTO authDTO) throws ServiceException {
         logger.info("Authenticating user with phone number: {}", authDTO.getPhoneNumberOrEmail());
+        AuthDTO sanitizedDTO = InputValidationAndSanitizationService.validateAndSanitize(authDTO);
         //authenticate user using phone number or email and password
-        Authentication auth = authenticate(authDTO.getPhoneNumberOrEmail(), authDTO.getPassword());
+        Authentication auth = authenticate(sanitizedDTO.getPhoneNumberOrEmail(), sanitizedDTO.getPassword());
         //token generation flow
         CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();//it has userdetails called in phonenoauthprovder by constructor we are setting when user verfies.
         // Add all required claims
@@ -61,7 +63,7 @@ public class AuthController {
 
         // Generate JWT token
         String token = jwtUtil.generateToken(claims, user.getUsername());
-        logger.info("JWT token generated successfully for user: {}", authDTO.getPhoneNumberOrEmail());
+        logger.info("JWT token generated successfully for user: {}", sanitizedDTO.getPhoneNumberOrEmail());
         return ResponseEntity.ok(new JwtResponse(token, user.getEmail(), user.getName(), user.getUserRoles(), user.getEmail(), user.getProfilePictureUrl(), user.getId()));
     }
 

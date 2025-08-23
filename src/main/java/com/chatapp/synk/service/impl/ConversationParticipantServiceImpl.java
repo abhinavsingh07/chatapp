@@ -1,5 +1,7 @@
 package com.chatapp.synk.service.impl;
 
+import com.chatapp.synk.chat.security_validator.InputSecurityUtils;
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.ConversationParticipantDTO;
 import com.chatapp.synk.entity.ConversationParticipant;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
@@ -31,7 +33,8 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     @CachePut(value = "participantCache", key = "#result.id")
     public ConversationParticipantDTO addParticipant(ConversationParticipantDTO dto) {
         logger.info("Adding participant to conversation {}", dto.getConversationId());
-        ConversationParticipant entity = Mapper.mapToParticipantEntity(dto);
+        ConversationParticipantDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
+        ConversationParticipant entity = Mapper.mapToParticipantEntity(validDTO);
         ConversationParticipant saved = repository.save(entity);
         logger.info("Participant added with ID: {}", saved.getId());
         return Mapper.mapToParticipantDTO(saved);
@@ -41,10 +44,11 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     @Cacheable(value = "participantCache", key = "#id", unless = "#result == null")
     public ConversationParticipantDTO getParticipantById(String id) {
         logger.info("Fetching participant by ID: {}", id);
-        Optional<ConversationParticipantDTO> result = repository.findById(id.trim()).map(Mapper::mapToParticipantDTO);
+        String validId = InputSecurityUtils.secureId(id);
+        Optional<ConversationParticipantDTO> result = repository.findById(validId).map(Mapper::mapToParticipantDTO);
 
         if (result.isEmpty()) {
-            logger.warn("No conversation participant found with ID: {}", id.trim());
+            logger.warn("No conversation participant found with ID: {}", validId);
             return null;
         }
         return result.get();
@@ -54,7 +58,8 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     @Cacheable(value = "participantCache", key = "#conversationId", unless = "#result == null or #result.isEmpty()")
     public List<ConversationParticipantDTO> getParticipantsByConversationId(String conversationId) {
         logger.info("Fetching participants for conversation ID: {}", conversationId.trim());
-        List<ConversationParticipant> list = repository.findByConversationId(conversationId.trim());
+        String validId = InputSecurityUtils.secureId(conversationId);
+        List<ConversationParticipant> list = repository.findByConversationId(validId);
         return list.stream().map(Mapper::mapToParticipantDTO).collect(Collectors.toList());
     }
 
@@ -62,7 +67,8 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     @CacheEvict(value = "participantCache", key = "#id")
     public void deleteByConversationid(String id) {
         logger.info("Removing all conversation participants with conversation ID: {}", id);
-        List<ConversationParticipant> list = repository.findByConversationId(id.trim());
+        String validId = InputSecurityUtils.secureId(id);
+        List<ConversationParticipant> list = repository.findByConversationId(validId);
         for (ConversationParticipant cp : list) {
             repository.deleteById(cp.getId());
         }

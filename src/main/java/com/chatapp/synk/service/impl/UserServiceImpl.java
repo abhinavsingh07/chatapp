@@ -1,5 +1,8 @@
 package com.chatapp.synk.service.impl;
 
+import com.chatapp.synk.chat.security_validator.InputSecurityUtils;
+import com.chatapp.synk.chat.security_validator.InputValidationAndSanitizationService;
+import com.chatapp.synk.chat.security_validator.UserInputValidator;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.entity.Contact;
 import com.chatapp.synk.entity.User;
@@ -11,9 +14,7 @@ import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.repository.UserRoleRepository;
 import com.chatapp.synk.service.UserService;
-import com.chatapp.synk.util.AppUtils;
 import com.chatapp.synk.util.Mapper;
-import com.chatapp.synk.util.StringUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -60,34 +61,28 @@ public class UserServiceImpl implements UserService {
     //using in userdetails service.
     //Caching we do explicitly using cache manage inside method
     public UserDTO getUserByPhoneNumberOrEmail(String phoneNumberOrEmail) {
-        if (StringUtility.isEmpty(phoneNumberOrEmail)) {
-            logger.error("Input identifier is empty. Cannot fetch user.");
-            throw new ServiceException("Phone number or email must be provided", HttpStatus.BAD_REQUEST);
-        }
-
-        String trimmed = phoneNumberOrEmail.trim();
-
         Optional<UserDTO> result;
 
-        if (AppUtils.isValidEmail(trimmed)) {
-            logger.info("Fetching user by email: {}", trimmed);
-            result = userRepository.findByEmail(trimmed).map(Mapper::mapToUserDTO);
-        } else if (AppUtils.isValidPhoneNumber(trimmed)) {
-            logger.info("Fetching user by phone number: {}", trimmed);
-            result = userRepository.findByPhoneNumber(trimmed).map(Mapper::mapToUserDTO);
+        String validPhoneNumberOrEmail = InputSecurityUtils.secureLoginId(phoneNumberOrEmail);
+
+        if (UserInputValidator.isValidEmail(validPhoneNumberOrEmail)) {
+            logger.info("Fetching user by email: {}", validPhoneNumberOrEmail);
+            result = userRepository.findByEmail(validPhoneNumberOrEmail).map(Mapper::mapToUserDTO);
+        } else if (UserInputValidator.isValidPhoneNumber(validPhoneNumberOrEmail)) {
+            logger.info("Fetching user by phone number: {}", validPhoneNumberOrEmail);
+            result = userRepository.findByPhoneNumber(validPhoneNumberOrEmail).map(Mapper::mapToUserDTO);
         } else {
-            logger.error("Invalid identifier format: {}", trimmed);
+            logger.error("Invalid identifier format: {}", validPhoneNumberOrEmail);
             throw new ServiceException("Identifier must be a valid email or phone number", HttpStatus.BAD_REQUEST);
         }
 
         if (result.isEmpty()) {
-            logger.warn("No user found with identifier: {}", trimmed);
+            logger.warn("No user found with identifier: {}", validPhoneNumberOrEmail);
             throw new ServiceException("User not found with ID", HttpStatus.NOT_FOUND);
         }
 
         // Manually cache this using CacheManager (optional)
         //cacheManager.getCache("userCache").put(result.get().getId(), result.get());
-
         return result.get();
     }
 
@@ -95,10 +90,12 @@ public class UserServiceImpl implements UserService {
     @Cacheable(value = "userCache", key = "#userId", unless = "#result == null")
     public UserDTO getUserById(String userId) {
         logger.info("Fetching user by ID: {}", userId);
-        Optional<UserDTO> result = userRepository.findById(userId.trim()).map(Mapper::mapToUserDTO);
+        String validId = InputSecurityUtils.secureId(userId);
+
+        Optional<UserDTO> result = userRepository.findById(validId).map(Mapper::mapToUserDTO);
 
         if (result.isEmpty()) {
-            logger.warn("No user found with ID: {}", userId);
+            logger.warn("No user found with ID: {}", validId);
             throw new ServiceException("User not found with ID", HttpStatus.NOT_FOUND);
         }
 
@@ -114,7 +111,9 @@ public class UserServiceImpl implements UserService {
     public UserDTO createUser(UserDTO userDTO) {
         logger.info("Creating new user with phone: {}", userDTO.getPhoneNumber());
         try {
-            User user = Mapper.mapToUserEntity(userDTO, passwordEncoder);
+            //first validate the dto
+            UserDTO vaildatedDTO = InputValidationAndSanitizationService.validateAndSanitize(userDTO);
+            User user = Mapper.mapToUserEntity(vaildatedDTO, passwordEncoder);
             // Always assign ROLE_USER by default
             UserRole userRole = userRoleRepository.findByName(RoleName.ROLE_USER).orElseThrow(() -> new RuntimeException("Default role not found"));
             user.setUserRole(userRole.getName());
@@ -149,18 +148,19 @@ public class UserServiceImpl implements UserService {
     @Caching(put = {@CachePut(value = "userCache", key = "#userId", unless = "#result == null")}, evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
     public UserDTO updateUser(String userId, UserDTO userDTO) {
         logger.info("Updating user with ID: {}", userId);
+        String validId = InputSecurityUtils.secureId(userId);
 
-        Optional<User> optionalUser = userRepository.findById(userId);
+        Optional<User> optionalUser = userRepository.findById(validId);
         if (optionalUser.isEmpty()) {
-            logger.error("User not found while updating. ID: {}", userId);
+            logger.error("User not found while updating. ID: {}", validId);
             throw new ServiceException("User not found with ID", HttpStatus.NOT_FOUND);
         }
-
+        UserDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(userDTO);
         try {
             User user = optionalUser.get();
-            user.setName(userDTO.getName());
-            user.setProfilePictureUrl(userDTO.getProfilePictureUrl());
-            user.setAbout(userDTO.getAbout());
+            user.setName(validDTO.getName());
+            user.setProfilePictureUrl(validDTO.getProfilePictureUrl());
+            user.setAbout(validDTO.getAbout());
 
             User updatedUser = userRepository.save(user);
             logger.info("User updated successfully. ID: {}", updatedUser.getId());
@@ -177,7 +177,8 @@ public class UserServiceImpl implements UserService {
     })
     public void deleteUser(String userId) {
         logger.info("Deleting user with ID: {}", userId);
-        userRepository.deleteById(userId.trim());
+        String validId = InputSecurityUtils.secureId(userId);
+        userRepository.deleteById(validId);
         logger.info("User with ID {} deleted successfully", userId);
     }
 }
