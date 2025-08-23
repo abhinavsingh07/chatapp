@@ -107,7 +107,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional//Now the entire flow, including saving user and updating contacts, happens in a single transaction.
-    @Caching(put = {@CachePut(value = "userCache", key = "#result.id", unless = "#result == null")}, evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
+    @Caching(put = {@CachePut(value = "userCache", key = "#result.id", unless = "#result == null")},
+            evict = {@CacheEvict(value = "userListCache", key = "'allUsers'", beforeInvocation = true)})
     public UserDTO createUser(UserDTO userDTO) {
         logger.info("Creating new user with phone: {}", userDTO.getPhoneNumber());
         try {
@@ -145,7 +146,8 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    @Caching(put = {@CachePut(value = "userCache", key = "#userId", unless = "#result == null")}, evict = {@CacheEvict(value = "userListCache", key = "'allUsers'")})
+    @Caching(put = {@CachePut(value = "userCache", key = "#userId", unless = "#result == null")},
+            evict = {@CacheEvict(value = "userListCache", key = "'allUsers'",beforeInvocation = true)})
     public UserDTO updateUser(String userId, UserDTO userDTO) {
         logger.info("Updating user with ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
@@ -172,8 +174,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Caching(evict = {@CacheEvict(value = "userCache", key = "#userId"),      // evict single user
-            @CacheEvict(value = "userListCache", key = "'allUsers'") // evict cached user list
+    @Caching(evict = {@CacheEvict(value = "userCache", key = "#userId", beforeInvocation = true),      // evict single user
+            @CacheEvict(value = "userListCache", key = "'allUsers'", beforeInvocation = true) // evict cached user list beforeInvocation = true evict cache before even if method runs successfuly or not
     })
     public void deleteUser(String userId) {
         logger.info("Deleting user with ID: {}", userId);

@@ -78,7 +78,7 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
-    @Caching(evict = {@CacheEvict(value = "contactCache", key = "#contactId")})
+    @Caching(evict = {@CacheEvict(value = "contactCache", key = "#contactId",beforeInvocation = true)})
     public void deleteContact(String contactId) {
         logger.info("Attempting to delete contact with ID: {}", contactId);
         String validId = InputSecurityUtils.secureId(contactId);
@@ -102,12 +102,15 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
-    @Caching(evict = {@CacheEvict(value = "contactListCache", key = "#contactDTO.userId"), @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'")}, put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
+    @Caching(evict = {
+            @CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null",beforeInvocation = true),
+            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'",beforeInvocation = true)},
+            put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
     public ContactDTO addContact(ContactDTO dto) {
         ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
         String userId = validDTO.getUserId();
         String email = validDTO.getEmail();
-        logger.info("Adding contact for userId={} by email={}", userId, email);
+        logger.info("Contact add request for userId={} by email={}", userId, email);
 
         try {
             // Check if user exists for the given email

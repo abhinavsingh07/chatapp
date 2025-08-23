@@ -3,7 +3,6 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.service.UserService;
-import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -53,7 +52,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse<UserDTO>> updateUser(@PathVariable(required = true) String id, @Valid @RequestBody UserDTO userDTO) {
+    public ResponseEntity<SuccessResponse<UserDTO>> updateUser(@PathVariable(required = true) String id, @RequestBody UserDTO userDTO) {
         logger.info("Received update request for user ID: {}", id);
 
         UserDTO updatedUser = userService.updateUser(id, userDTO);

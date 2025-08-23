@@ -64,7 +64,7 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     }
 
     @Override
-    @CacheEvict(value = "participantCache", key = "#id")
+    @CacheEvict(value = "participantCache", key = "#id",beforeInvocation = true)
     public void deleteByConversationid(String id) {
         logger.info("Removing all conversation participants with conversation ID: {}", id);
         String validId = InputSecurityUtils.secureId(id);

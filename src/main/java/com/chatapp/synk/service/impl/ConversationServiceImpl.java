@@ -39,7 +39,7 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")},
-            evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'")})
+            evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'",beforeInvocation = true)})
     public ConversationDTO createConversation(ConversationDTO dto) {
         logger.info("Creating new conversation");
         ConversationDTO validTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
