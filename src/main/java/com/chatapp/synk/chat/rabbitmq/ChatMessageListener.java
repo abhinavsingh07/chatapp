@@ -1,5 +1,6 @@
 package com.chatapp.synk.chat.rabbitmq;
 
+import com.chatapp.synk.chat.common.ChatMessage;
 import com.chatapp.synk.chat.common.DeliveryEnvelope;
 import com.chatapp.synk.chat.common.Json;
 import com.chatapp.synk.chat.redis.RedisSessionStore;
@@ -41,7 +42,7 @@ public class ChatMessageListener {
 
         try {
             DeliveryEnvelope env = Json.mapper().readValue(payload, DeliveryEnvelope.class);
-            logger.info("[RabbitMQ] Converted payload into DeliveryEnvelope for conversationId={} targetUserId={}", env.getMessage().getConversationId(), env.getTargetUserId());
+            createInfoLog("[RabbitMQ] Converted payload into DeliveryEnvelope for conversationId={} targetUserId={}", env.getMessage().getConversationId(), env.getTargetUserId(), env.getMessage());
 
             // Persist message if it’s a chat message
             if (env.getMessage().getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
@@ -68,7 +69,7 @@ public class ChatMessageListener {
 
             // Ack only if DB save + delivery attempt done
             channel.basicAck(tag, false);
-            logger.debug("[RabbitMQ] Message acked (conversationId={} userId={})", env.getMessage().getConversationId(), env.getTargetUserId());
+            createInfoLog("[RabbitMQ] Message acked (conversationId={} userId={})", env.getMessage().getConversationId(), env.getTargetUserId(), env.getMessage());
 
         } catch (Exception e) {
             logger.error("[RabbitMQ] Failed to process payload: {}", payload, e);
@@ -80,6 +81,7 @@ public class ChatMessageListener {
             }
         }
     }
+
 
     /**
      * Attempts to send a message to a WebSocket session.
@@ -94,14 +96,21 @@ public class ChatMessageListener {
         if (wsSession != null && wsSession.isOpen()) {
             try {
                 wsSession.sendMessage(new TextMessage(Json.mapper().writeValueAsString(env.getMessage())));
-                logger.info("[WS] Message delivered to userId={} sessionId={}", env.getTargetUserId(), sessionId);
+                createInfoLog("[WS] Message delivered to userId={} sessionId={}", env.getTargetUserId(), sessionId, env.getMessage());
                 return true;
             } catch (Exception e) {
-                logger.error("[WS] Failed to send message to userId={} sessionId={}", env.getTargetUserId(), sessionId, e);
+                logger.error("[WS] Failed to send message to userId={} sessionId={} error={}", env.getTargetUserId(), sessionId, e.getMessage());
             }
         } else {
             logger.debug("[WS] SessionId={} not found or closed for userId={}", sessionId, env.getTargetUserId());
         }
         return false;
+    }
+
+    private void createInfoLog(String template, Object... args) {
+        ChatMessage chatMessage = (ChatMessage) args[args.length - 1];
+        if (chatMessage.getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
+            logger.info(template, args);
+        }
     }
 }

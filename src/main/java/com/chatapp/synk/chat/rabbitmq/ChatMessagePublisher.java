@@ -39,7 +39,7 @@ public class ChatMessagePublisher {
 
         if (serverId == null) {
             // user offline → fallback handling
-            logger.info("[OFFLINE] Target user offline | toUserId={}. Persisting to DB for later delivery.", toUserId);
+            createInfoLog("[OFFLINE] Target user offline | toUserId={}. Persisting to DB for later delivery.", toUserId, chatMessage);
             serverId = System.getProperty("server.id");
         }
 
@@ -50,7 +50,7 @@ public class ChatMessagePublisher {
 
             rabbitTemplate.convertAndSend(ChatUtil.EXCHANGE_NAME, routingKey, json);
 
-            logger.info("[SUCCESS] Published message | exchange={} | routingKey={} | toUserId={} | sessionId={}", ChatUtil.EXCHANGE_NAME, routingKey, toUserId, targetSessionId);
+            createInfoLog("[SUCCESS] Published message | exchange={} | routingKey={} | toUserId={} | sessionId={}", ChatUtil.EXCHANGE_NAME, routingKey, toUserId, targetSessionId, env.getMessage());
 
         } catch (Exception e) {
             logger.error("[ERROR] Failed to publish message | toUserId={} | sessionId={} | reason={}", toUserId, targetSessionId, e.getMessage(), e);
@@ -58,9 +58,10 @@ public class ChatMessagePublisher {
         }
     }
 
-    private void createInfoLog(String log, ChatMessage chatMessage) {
+    private void createInfoLog(String template, Object... args) {
+        ChatMessage chatMessage = (ChatMessage) args[args.length - 1];
         if (chatMessage.getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
-            logger.info("[CHAT] {}", log);
+            logger.info(template, args);
         }
     }
 }
