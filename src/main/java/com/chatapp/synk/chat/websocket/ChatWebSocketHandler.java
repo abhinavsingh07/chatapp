@@ -46,6 +46,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             wsSession.close(CloseStatus.BAD_DATA);
             return;
         }
+        // Check if the user already has an active session in local or Redis
+        WebSocketSession localSession = localWsSessionRegistry.get(userId);
+        String storedRedisSessionId = redisSessionStore.getUserSessionId(userId);
+
+        boolean hasLocalSession = (localSession != null && localSession.isOpen());
+        boolean hasDifferentRedisSession = (storedRedisSessionId != null && !storedRedisSessionId.equals(sessionId));
+
+        if (hasLocalSession || hasDifferentRedisSession) {
+            logger.warn("WS_CONNECT_REJECTED | userId={} sessionId={} reason=Duplicate session", userId, sessionId);
+            try {
+                wsSession.close(CloseStatus.POLICY_VIOLATION.withReason("Duplicate session"));
+            } catch (IOException e) {
+                logger.error("WS_CLOSE_FAILED | userId={} sessionId={} error={}", userId, sessionId, e.getMessage(), e);
+            }
+            return;
+        }
 
         localWsSessionRegistry.add(sessionId, userId, wsSession);
         redisSessionStore.saveUserSession(userId, serverId, sessionId);
@@ -61,7 +77,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String sessionId = wsSession.getId();
         String payload = message.getPayload();
 
-        createInfoLog("WS_MESSAGE_RECEIVED | userId={} sessionId={} payload={}", userId, sessionId, payload);
+        createInfoLog("[WS_MESSAGE_RECEIVED] | userId={} sessionId={} payload={}", userId, sessionId, payload);
 
         try {
             CompletableFuture.runAsync(() -> {
@@ -72,22 +88,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
                     chatMessagePublisher.sendToUser(chatMessage);
 
-                    createInfoLog("WS_MESSAGE_PUBLISHED | userId={} sessionId={} toUserId={}", userId, sessionId, chatMessage.getToUserId(), payload);
+                    createInfoLog("[WS_MESSAGE_PUBLISHED] | userId={} sessionId={} toUserId={}", userId, sessionId, chatMessage.getToUserId(), payload);
                 } catch (Exception ex) {
-                    logger.error("WS_MESSAGE_PROCESSING_FAILED | userId={} sessionId={} payload={}", userId, sessionId, payload, ex);
+                    logger.error("[WS_MESSAGE_PROCESSING_FAILED] | userId={} sessionId={} payload={}", userId, sessionId, payload, ex);
                     try {
                         wsSession.sendMessage(new TextMessage("{\"error\":\"Invalid message format or server error\"}"));
                     } catch (IOException ioEx) {
-                        logger.error("WS_ERROR_RESPONSE_FAILED | userId={} sessionId={}", userId, sessionId, ioEx);
+                        logger.error("[WS_ERROR_RESPONSE_FAILED] | userId={} sessionId={}", userId, sessionId, ioEx);
                     }
                 }
             }, taskExecutor).exceptionally(ex -> {
-                logger.error("WS_ASYNC_TASK_FAILED | userId={} sessionId={} payload={}", userId, sessionId, payload, ex);
+                logger.error("[WS_ASYNC_TASK_FAILED] | userId={} sessionId={} payload={}", userId, sessionId, payload, ex);
                 return null;
             });
 
         } catch (Exception e) {
-            logger.error("WS_TASK_SUBMISSION_FAILED | userId={} sessionId={} payload={}", userId, sessionId, payload, e);
+            logger.error("[WS_TASK_SUBMISSION_FAILED] | userId={} sessionId={} payload={}", userId, sessionId, payload, e);
             wsSession.sendMessage(new TextMessage("{\"error\":\"Server error, please retry\"}"));
         }
     }
@@ -100,9 +116,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (userId != null) {
             localWsSessionRegistry.remove(userId);
             redisSessionStore.deleteUserSession(userId);
-            logger.info("WS_DISCONNECTED | userId={} sessionId={} status={}", userId, sessionId, status);
+            logger.info("[WS_DISCONNECTED] | userId={} sessionId={} status={}", userId, sessionId, status);
         } else {
-            logger.warn("WS_DISCONNECTED_UNKNOWN | sessionId={} status={}", sessionId, status);
+            logger.warn("[WS_DISCONNECTED_UNKNOWN] | sessionId={} status={}", sessionId, status);
         }
 
         try {
@@ -110,19 +126,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 wsSession.close(status);
             }
         } catch (Exception e) {
-            logger.error("WS_CLEANUP_FAILED | userId={} sessionId={}", userId, sessionId, e);
+            logger.error("[WS_CLEANUP_FAILED] | userId={} sessionId={}", userId, sessionId, e);
         }
     }
 
     private void createInfoLog(String template, Object... args) {
         try {
-            String payload= args[args.length - 1].toString();
+            String payload = args[args.length - 1].toString();
             ChatMessage chatMessage = Json.mapper().readValue(payload, ChatMessage.class);
             if (chatMessage.getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
                 logger.info(template, args);
             }
         } catch (JsonProcessingException e) {
-            logger.warn("WS_LOGGING_FAILED | reason=Invalid payload while logging", e);
+            logger.warn("[WS_LOGGING_FAILED] | reason=Invalid payload while logging", e);
         }
     }
 }
