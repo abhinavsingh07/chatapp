@@ -63,6 +63,7 @@ public class UserController {
             logger.warn("No user ID provided for status check");
             return ResponseEntity.ok(new SuccessResponse<>("400", "No user ID provided", Collections.emptyList()));
         }
+        //this is will give the last active status of multiple users, as user can be active in multiple devices, so we will return the list of status of all devices
         List<UserStatusDTO> result = userService.getLastActiveUserStatus(userId);
         if (result.isEmpty()) {
             logger.warn("No status found for user ID {}", userId);

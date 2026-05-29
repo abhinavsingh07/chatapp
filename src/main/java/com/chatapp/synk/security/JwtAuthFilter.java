@@ -59,7 +59,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // Signature is verified here inside JwtUtil
                 String username = jwtUtil.extractUsername(token);
                 List<String> roles = jwtUtil.extractRoles(token);
-
+                /**
+                 * "If token signature is valid,
+                 * then token was issued by my server."
+                 * That is the core idea of JWT authentication.
+                 * */
                 if (jwtUtil.isTokenValid(token)) { // validate signature + expiry
 
                     // Convert roles into Spring Security authorities

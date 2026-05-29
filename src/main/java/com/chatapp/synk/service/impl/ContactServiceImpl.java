@@ -42,7 +42,8 @@ public class ContactServiceImpl implements ContactService {
     private final EmailService emailService;
     private final ExecutorService taskExecutor;
 
-    public ContactServiceImpl(ContactRepository contactRepository, UserService userService, CacheManager cacheManager, EmailService emailService, ExecutorService taskExecutor) {
+    public ContactServiceImpl(ContactRepository contactRepository, UserService userService, CacheManager cacheManager,
+            EmailService emailService, ExecutorService taskExecutor) {
         this.contactRepository = contactRepository;
         this.userService = userService;
         this.cacheManager = cacheManager;
@@ -69,7 +70,7 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
-    @Caching(evict = {@CacheEvict(value = "contactCache", key = "#contactId", beforeInvocation = true)})
+    @Caching(evict = { @CacheEvict(value = "contactCache", key = "#contactId", beforeInvocation = true) })
     public void deleteContact(String contactId) {
         String validId = InputSecurityUtils.secureId(contactId);
         Optional<Contact> contactOpt = contactRepository.findById(validId);
@@ -108,26 +109,10 @@ public class ContactServiceImpl implements ContactService {
 
 
     @Override
-    @Cacheable(value = "mutualContacts", key = "#userAId + '_' + #userBId")
-    public boolean isMutualContact(String userAId, String userBId) {
-        String validuserAId = InputSecurityUtils.secureId(userAId);
-        String validuserBId = InputSecurityUtils.secureId(userBId);
-        logger.debug("Checking mutual contact status between [{}] and [{}]", validuserAId, validuserAId);
-
-        boolean aToB = contactRepository.existsByUserIdAndContactUserIdAndContactStatus(validuserAId, validuserAId, ContactStatus.ADDED);
-        logger.trace("Contact check: [{} -> {}] = {}", validuserAId, validuserAId, aToB);
-
-        boolean bToA = contactRepository.existsByUserIdAndContactUserIdAndContactStatus(validuserAId, validuserAId, ContactStatus.ADDED);
-        logger.trace("Contact check: [{} -> {}] = {}", validuserAId, validuserAId, bToA);
-
-        boolean mutual = aToB && bToA;
-        logger.debug("Mutual contact result between [{}] and [{}] = {}", validuserAId, validuserAId, mutual);
-
-        return mutual;
-    }
-
-    @Override
-    @Caching(evict = {@CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true), @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true)}, put = {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null")})
+    @Caching(evict = {
+            @CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
+            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) }, put = {
+                    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
     public ContactDTO addContact(ContactDTO dto) {
         ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
         String userId = validDTO.getUserId();
@@ -136,16 +121,26 @@ public class ContactServiceImpl implements ContactService {
         logger.info("Processing addContact request for userId={} with email={}", userId, email);
 
         try {
+
+            if (contactExistsByEmail(email)) {
+                throw new ServiceException("A contact with this email already exists", HttpStatus.BAD_REQUEST);
+            }
+
+            // checking if contact email belongs to an existing user from user table
+            // it throws 404 if user not found, which we catch to trigger invite flow
             UserDTO existingUser = userService.getUserByPhoneNumberOrEmail(email);
 
             if (existingUser.getId().equals(userId)) {
                 throw new ServiceException("You cannot add yourself as a contact", HttpStatus.BAD_REQUEST);
             }
 
+            // checking if contact already exists for this userId in user table
             if (contactExists(userId, existingUser.getId())) {
                 throw new ServiceException("Contact already exists for this user", HttpStatus.BAD_REQUEST);
             }
 
+            // if we reach here, it means email belongs to an existing user and contact
+            // doesn't exist, so we can create contact with ADDED status
             ContactDTO contactDTO = new ContactDTO();
             contactDTO.setUserId(userId);
             contactDTO.setContactUserId(existingUser.getId());
@@ -175,7 +170,9 @@ public class ContactServiceImpl implements ContactService {
         ContactDTO savedContact = saveContact(contactDTO);
 
         CompletableFuture.runAsync(() -> {
-            boolean sent = emailService.sendEmail(new EmailDTO(email, "You're invited to join ChatApp!", "Hi there!\n\nYou've been invited to join ChatApp. " + "Click here to register:\nhttps://yourapp.com/register"));
+            boolean sent = emailService.sendEmail(new EmailDTO(email, "You're invited to join ChatApp!",
+                    "Hi there!\n\nYou've been invited to join ChatApp. "
+                            + "Click here to register:\nhttps://yourapp.com/register"));
             updateEmailStatus(savedContact.getId(), sent ? EmailStatus.SENT : EmailStatus.FAILED);
         }, taskExecutor);
 
@@ -184,6 +181,11 @@ public class ContactServiceImpl implements ContactService {
 
     private boolean contactExists(String userId, String contactUserId) {
         return !contactRepository.findByUserIdAndContactUserId(userId, contactUserId).isEmpty();
+    }
+
+    private boolean contactExistsByEmail(String email) {
+        List<Contact> contacts = contactRepository.findByEmailAndContactUserIdIsNull(email);
+        return !contacts.isEmpty();
     }
 
     private void updateEmailStatus(String contactId, EmailStatus status) {
@@ -201,9 +203,9 @@ public class ContactServiceImpl implements ContactService {
             return Mapper.mapToContactDTO(saved);
 
         } catch (Exception ex) {
-            logger.error("Failed to save contact for userId={}, reason={}", contactDTO.getUserId(), ex.getMessage(), ex);
+            logger.error("Failed to save contact for userId={}, reason={}", contactDTO.getUserId(), ex.getMessage(),
+                    ex);
             throw new ServiceException("Failed to save contact", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
-

@@ -58,25 +58,4 @@ public class ContactController {
         logger.info("Contact deleted successfully for contactId: {}", contactId);
         return ResponseEntity.ok(new SuccessResponse<>("200", "Contact deleted successfully", List.of()));
     }
-
-    @GetMapping("/mutual/{userA}/{userB}")
-    public ResponseEntity<SuccessResponse<Map<String, Object>>> isMutualContact(@PathVariable("userA") String userA, @PathVariable("userB") String userB) {
-        logger.info("Checking mutual contact between userA: {} and userB: {}", userA, userB);
-
-        boolean mutual = contactService.isMutualContact(userA, userB);
-
-        Map<String, Object> responseData = new HashMap<>();
-        responseData.put("userA", userA);
-        responseData.put("userB", userB);
-        responseData.put("mutual", mutual);
-
-        if (!mutual) {
-            logger.warn("Users are not mutual contacts -> userA: {}, userB: {}", userA, userB);
-            return ResponseEntity.ok(new SuccessResponse<>("404", "Users are not mutual contacts", Arrays.asList(responseData)));
-        }
-
-        logger.info("Users are mutual contacts -> userA: {}, userB: {}", userA, userB);
-        return ResponseEntity.ok(new SuccessResponse<>("200", "Users are mutual contacts", Arrays.asList(responseData)));
-    }
-
 }

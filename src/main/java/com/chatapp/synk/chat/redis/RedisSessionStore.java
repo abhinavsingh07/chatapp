@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class RedisSessionStore {
@@ -19,6 +20,9 @@ public class RedisSessionStore {
 
     public RedisSessionStore(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
+        Set<String> keys = redisTemplate.keys("user:lastActive:*");
+        logger.info("All keys with pattern 'lastActive' size: {}", keys.size());
+
     }
 
     public void saveUserSession(String userId, String serverId, String wsSessionId) {
@@ -61,13 +65,13 @@ public class RedisSessionStore {
         logger.debug("Deleted session for userId={} with redisLookupKey={}", userId, redisLookupKey);
     }
 
-    public void updateLastActiveTimestamp(String userid){
+    public void updateLastActiveTimestamp(String userid) {
         String redisLookupKey = ChatUtil.buildUserLastActiveKey(userid);
         redisTemplate.opsForHash().put(redisLookupKey, "lastActive", Instant.now().toEpochMilli());
         logger.debug("Updated lastActive for userId={} to {}", userid, Instant.now());
     }
 
-    public String getLastActiveTimeStampUser(String userid){
+    public String getLastActiveTimeStampUser(String userid) {
         String redisLookupKey = ChatUtil.buildUserLastActiveKey(userid);
         Object v = redisTemplate.opsForHash().get(redisLookupKey, "lastActive");
         String lastActive = v != null ? v.toString() : null;

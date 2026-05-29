@@ -31,12 +31,6 @@ public interface ContactRepository extends JpaRepository<Contact, String> {
         u.email,
         u.profilePictureUrl,
         u.status,
-        CASE WHEN EXISTS (
-            SELECT 1 FROM Contact c2
-            WHERE c2.userId = c.contactUserId
-              AND c2.contactUserId = c.userId
-              AND c2.contactStatus = com.chatapp.synk.enums.ContactStatus.ADDED
-        ) THEN true ELSE false END,
         c.userId
     )
     FROM Contact c

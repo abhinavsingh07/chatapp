@@ -66,7 +66,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Cacheable(value = "conversationCache", key = "'allConversations'")
+    @Cacheable(value = "conversationListCache", key = "'allConversations'")
     public List<ConversationDTO> findAll() {
         if (logger.isDebugEnabled()) {
             logger.debug("Fetching all conversations from DB");
@@ -75,7 +75,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Cacheable(value = "conversationCache", key = "#loggedInUserId + '_' + #contactUserId", unless = "#result == null")
+    @Cacheable(value = "conversationIdLookupCache", key = "#loggedInUserId + '_' + #contactUserId", unless = "#result == null")
     @Transactional
     public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
         if (logger.isDebugEnabled()) {

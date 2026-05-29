@@ -138,43 +138,4 @@ class ContactControllerTest {
         assertEquals("Contact deleted successfully", response.getBody().getMessage());
         verify(contactService, times(1)).deleteContact(contactId);
     }
-
-    @Test
-    void testIsMutualContact_WhenMutual() {
-        // Arrange
-        String userA = "user1";
-        String userB = "user2";
-        when(contactService.isMutualContact(userA, userB)).thenReturn(true);
-
-        // Act
-        ResponseEntity<SuccessResponse<java.util.Map<String, Object>>> response = contactController.isMutualContact(userA, userB);
-
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals("200", response.getBody().getResponseCode());
-        assertEquals("Users are mutual contacts", response.getBody().getMessage());
-        assertEquals(1, response.getBody().getData().size());
-        assertTrue((boolean) response.getBody().getData().get(0).get("mutual"));
-        verify(contactService, times(1)).isMutualContact(userA, userB);
-    }
-
-    @Test
-    void testIsMutualContact_WhenNotMutual() {
-        // Arrange
-        String userA = "user1";
-        String userB = "user3";
-        when(contactService.isMutualContact(userA, userB)).thenReturn(false);
-
-        // Act
-        ResponseEntity<SuccessResponse<java.util.Map<String, Object>>> response = contactController.isMutualContact(userA, userB);
-
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals("404", response.getBody().getResponseCode());
-        assertEquals("Users are not mutual contacts", response.getBody().getMessage());
-        assertFalse((boolean) response.getBody().getData().get(0).get("mutual"));
-        verify(contactService, times(1)).isMutualContact(userA, userB);
-    }
 }

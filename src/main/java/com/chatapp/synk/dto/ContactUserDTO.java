@@ -18,11 +18,11 @@ public class ContactUserDTO {
     private String email;
     private String profilePictureUrl;
     private UserStatus status;
-    private Boolean isMutual;
 
 
-    //using JPQL query
-    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId,String contactEmail, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status,Boolean isMutual,String userId) {
+
+    //using JPQL query and normal object mapping in repository layer to set these fields
+    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId,String contactEmail, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status,String userId) {
         this.contactId = contactId;
         this.contactStatus = contactStatus;
         this.emailStatus = emailStatus;
@@ -33,22 +33,6 @@ public class ContactUserDTO {
         this.email = email;
         this.profilePictureUrl = profilePictureUrl;
         this.status = status;
-        this.isMutual=isMutual;
-        this.userId=userId;
-    }
-
-    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId, String contactEmail, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status,String userId) {
-        this.contactId = contactId;
-        this.contactStatus = contactStatus;
-        this.emailStatus = emailStatus;
-        this.contactUserId = contactUserId;
-        this.contactEmail = contactEmail;
-        this.name = name;
-        this.phoneNumber = phoneNumber;
-        this.email = email;
-        this.profilePictureUrl = profilePictureUrl;
-        this.status = status;
-        this.isMutual=false;
         this.userId=userId;
     }
 
@@ -143,11 +127,4 @@ public class ContactUserDTO {
         this.userId = userId;
     }
 
-    public Boolean getMutual() {
-        return isMutual;
-    }
-
-    public void setMutual(Boolean mutual) {
-        isMutual = mutual;
-    }
 }

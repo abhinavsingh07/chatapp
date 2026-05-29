@@ -195,6 +195,7 @@ public class UserServiceImpl implements UserService {
         logger.info("User deleted successfully. ID: {}", userId);
     }
 
+    // This method returns lastactive timestamp for multiple users, as user can be active in multiple devices, so we will return the list of status of all devices
     @Override
     public List<UserStatusDTO> getLastActiveUserStatus(String userId) {
         logger.debug("Fetching last active timestamp for user(s): {}", userId);

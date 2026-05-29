@@ -20,8 +20,8 @@ public class ChatMessagePublisher {
     private final LocalWsSessionRegistry localWsSessionRegistryRegistry;
 
     public ChatMessagePublisher(RabbitTemplate rabbitTemplate,
-                                RedisTemplate<String, Object> redisTemplate,
-                                LocalWsSessionRegistry localWsSessionRegistryRegistry) {
+            RedisTemplate<String, Object> redisTemplate,
+            LocalWsSessionRegistry localWsSessionRegistryRegistry) {
         this.rabbitTemplate = rabbitTemplate;
         this.redisTemplate = redisTemplate;
         this.localWsSessionRegistryRegistry = localWsSessionRegistryRegistry;
@@ -39,7 +39,8 @@ public class ChatMessagePublisher {
         String targetSessionId = (String) redisTemplate.opsForHash().get(redisKey, "sessionId");
 
         if (serverId == null) {
-            logInfoIfChat(chatMessage, "[OFFLINE] Target user offline | toUserId={}. Persisting to DB for later delivery.");
+            logInfoIfChat(chatMessage,
+                    "[OFFLINE] Target user offline | toUserId={}. Persisting to DB for later delivery.");
             serverId = ServerIdProvider.getServerId();
         }
 
@@ -48,6 +49,7 @@ public class ChatMessagePublisher {
             String json = Json.mapper().writeValueAsString(env);
             String routingKey = ChatUtil.buildBindingKey(serverId);
 
+            // Publish to RabbitMQ exchange with routing key based on target serverId
             rabbitTemplate.convertAndSend(ChatUtil.EXCHANGE_NAME, routingKey, json);
 
             logInfoIfChat(chatMessage,
