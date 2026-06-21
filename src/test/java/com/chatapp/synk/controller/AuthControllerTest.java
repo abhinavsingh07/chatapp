@@ -1,7 +1,9 @@
 package com.chatapp.synk.controller;
 
 import com.chatapp.synk.dto.AuthDTO;
+import com.chatapp.synk.dto.RefreshTokenRequest;
 import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.JwtResponse;
@@ -92,6 +94,21 @@ class AuthControllerTest {
 
         // Act & Assert
         assertThrows(ServiceException.class, () -> authController.authenticate(authDTO));
+    }
+
+    @Test
+    void testRefreshToken_RevokedToken() {
+        // Arrange
+        RefreshTokenRequest request = new RefreshTokenRequest("revoked-refresh-token");
+        when(authService.refreshToken(request))
+                .thenThrow(new InvalidTokenException("Refresh token has been revoked"));
+
+        // Act & Assert
+        InvalidTokenException exception = assertThrows(
+                InvalidTokenException.class,
+                () -> authController.refreshToken(request));
+        assertEquals("Refresh token has been revoked", exception.getMessage());
+        verify(authService, times(1)).refreshToken(request);
     }
 
     @Test

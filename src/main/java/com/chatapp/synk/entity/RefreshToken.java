@@ -29,8 +29,14 @@ public class RefreshToken {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "revoked", nullable = false)
-    private boolean revoked;
+    @Column(name = "revoked" )
+    private char  revoked;
+
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
+
+    @Column(name = "revoke_reason", length = 100)
+    private String revokeReason;
 
     @Column(name = "device_id", length = 100)
     private String deviceId;
@@ -91,12 +97,28 @@ public class RefreshToken {
         this.expiresAt = expiresAt;
     }
 
-    public boolean isRevoked() {
+    public char isRevoked() {
         return revoked;
     }
 
-    public void setRevoked(boolean revoked) {
+    public void setRevoked(char  revoked) {
         this.revoked = revoked;
+    }
+
+    public Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    public void setRevokedAt(Instant revokedAt) {
+        this.revokedAt = revokedAt;
+    }
+
+    public String getRevokeReason() {
+        return revokeReason;
+    }
+
+    public void setRevokeReason(String revokeReason) {
+        this.revokeReason = revokeReason;
     }
 
     public String getDeviceId() {
@@ -123,5 +145,3 @@ public class RefreshToken {
         this.ipAddress = ipAddress;
     }
 }
-
-

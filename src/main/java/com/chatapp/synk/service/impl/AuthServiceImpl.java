@@ -1,4 +1,4 @@
-﻿package com.chatapp.synk.service.impl;
+package com.chatapp.synk.service.impl;
 
 import java.time.Instant;
 import java.util.Date;
@@ -110,10 +110,10 @@ public class AuthServiceImpl implements AuthService {
         // other details
         // claims.put("email", user.getEmail());
         // claims.put("name", user.getName());//dont store in jwt
-
+        //generate tokens
         String token = jwtUtil.generateAccessToken(claims, user.getPhoneNumber());
         String refreshToken = jwtUtil.generateRefreshToken(user.getPhoneNumber());
-
+        // save refresh token on login
         RefreshTokenDto refreshTokenDto = buildRefreshTokenDto(refreshToken, user.getId());
         saveRefreshToken(refreshTokenDto);
 
@@ -158,6 +158,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String refreshToken = request.getRefreshToken();
+        RefreshToken storedRefreshToken = getStoredRefreshToken(refreshToken);
+        if ('Y' == storedRefreshToken.isRevoked()) {
+            throw new InvalidTokenException("Refresh token has been revoked");
+        }
         // internally validating token signature
         String username = jwtUtil.extractUsername(refreshToken);
         if (StringUtil.isBlank(username)) {
@@ -199,8 +203,26 @@ public class AuthServiceImpl implements AuthService {
         return Mapper.mapToRefreshTokenDto(savedRefreshToken);
     }
 
+    @Override
+    @Transactional
+    public void revokeTokenMethod(RefreshTokenRequest request) {
+        if (request == null || StringUtil.isBlank(request.getRefreshToken())) {
+            throw new ServiceException("Refresh token is required", HttpStatus.BAD_REQUEST);
+        }
+
+        String tokenHash = HashUtil.hashWithSha256(request.getRefreshToken());
+        int revokedCount = refreshTokenRepository.revokeToken(tokenHash);
+        if (revokedCount == 0) {
+            throw new ServiceException("Refresh token not found", HttpStatus.NOT_FOUND);
+        }
+    }
     // Loads the user referenced by a refresh token or raises an invalid-token
     // error.
+    private RefreshToken getStoredRefreshToken(String refreshToken) {
+        String tokenHash = HashUtil.hashWithSha256(refreshToken);
+        return refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new InvalidTokenException("Refresh token validation failed - token not found"));
+    }
     private UserDTO getUserForRefreshToken(String username) {
         try {
             return userService.getUserByPhoneNumberOrEmail(username);
@@ -247,7 +269,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenDto.setTokenHash(hashedRefreshToken);// always store hash of token in db
         refreshTokenDto.setIssuedAt(toInstant(claims.getIssuedAt()));
         refreshTokenDto.setExpiresAt(toInstant(claims.getExpiration()));
-        refreshTokenDto.setRevoked(false);
+        refreshTokenDto.setRevoked('N');
         return refreshTokenDto;
     }
 

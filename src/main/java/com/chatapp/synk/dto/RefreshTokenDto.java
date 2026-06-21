@@ -9,7 +9,9 @@ public class RefreshTokenDto {
     private String tokenHash;
     private Instant issuedAt;
     private Instant expiresAt;
-    private boolean revoked;
+    private char revoked;
+    private Instant revokedAt;
+    private String revokeReason;
     private String deviceId;
     private String userAgent;
     private String ipAddress;
@@ -57,12 +59,28 @@ public class RefreshTokenDto {
         this.expiresAt = expiresAt;
     }
 
-    public boolean isRevoked() {
+    public char isRevoked() {
         return revoked;
     }
 
-    public void setRevoked(boolean revoked) {
+    public void setRevoked(char revoked) {
         this.revoked = revoked;
+    }
+
+    public Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    public void setRevokedAt(Instant revokedAt) {
+        this.revokedAt = revokedAt;
+    }
+
+    public String getRevokeReason() {
+        return revokeReason;
+    }
+
+    public void setRevokeReason(String revokeReason) {
+        this.revokeReason = revokeReason;
     }
 
     public String getDeviceId() {

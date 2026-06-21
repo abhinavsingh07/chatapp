@@ -44,6 +44,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.refreshToken(request));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<SuccessResponse<?>> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.revokeTokenMethod(request);
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Logged out successfully", List.of()));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<SuccessResponse<?>> forgotPassword(@Valid @RequestBody AuthDTO authDTO) {
         authService.forgotPassword(authDTO);

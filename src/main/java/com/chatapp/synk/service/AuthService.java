@@ -15,6 +15,6 @@ public interface AuthService {
     JwtResponse refreshToken(RefreshTokenRequest request);
 
     RefreshTokenDto saveRefreshToken(RefreshTokenDto refreshTokenDto);
+
+    void revokeTokenMethod(RefreshTokenRequest request);
 }
-
-

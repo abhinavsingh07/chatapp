@@ -22,6 +22,7 @@ import com.chatapp.synk.security_validator.InputValidationAndSanitizationService
 import com.chatapp.synk.security_validator.UserInputValidator;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.Mapper;
+import com.chatapp.synk.util.MaskIdentifierUtil;
 import com.chatapp.synk.util.PasswordUtil;
 import com.chatapp.synk.util.StringUtil;
 
@@ -128,7 +129,7 @@ public class UserServiceImpl implements UserService {
     })
     public UserDTO registerUser(UserDTO userDTO) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Registering new user with identifier: {}", maskIdentifier(userDTO.getPhoneNumber()));
+            logger.debug("Registering new user with identifier: {}", MaskIdentifierUtil.maskIdentifier(userDTO.getPhoneNumber()));
         }
         try {
             UserDTO validatedDTO = InputValidationAndSanitizationService.validateAndSanitize(userDTO);
