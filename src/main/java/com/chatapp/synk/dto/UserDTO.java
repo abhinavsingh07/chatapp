@@ -5,8 +5,6 @@ import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.enums.UserStatus;
 import jakarta.validation.constraints.NotBlank;
 
-import java.time.Instant;
-
 public class UserDTO {
 
     private String id;//userid

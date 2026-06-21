@@ -105,4 +105,34 @@ public class Mapper {
         message.setMessageStatus(dto.getMessageStatus());
         return message;
     }
+
+    public static RefreshToken mapToRefreshTokenEntity(RefreshTokenDto dto) {
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setId(dto.getId());
+        refreshToken.setUserId(dto.getUserId());
+        refreshToken.setTokenHash(dto.getTokenHash());
+        refreshToken.setIssuedAt(dto.getIssuedAt());
+        refreshToken.setExpiresAt(dto.getExpiresAt());
+        refreshToken.setRevoked(dto.isRevoked());
+        refreshToken.setDeviceId(dto.getDeviceId());
+        refreshToken.setUserAgent(dto.getUserAgent());
+        refreshToken.setIpAddress(dto.getIpAddress());
+        return refreshToken;
+    }
+
+    public static RefreshTokenDto mapToRefreshTokenDto(RefreshToken refreshToken) {
+        String generatedId = RandomUUIDGenerater.getId(RefreshToken.ALIAS_REFRESH_TOKEN).toString();
+        RefreshTokenDto dto = new RefreshTokenDto();
+        dto.setId(generatedId);
+        dto.setUserId(refreshToken.getUserId());
+        dto.setTokenHash(refreshToken.getTokenHash());
+        dto.setIssuedAt(refreshToken.getIssuedAt());
+        dto.setExpiresAt(refreshToken.getExpiresAt());
+        dto.setRevoked(refreshToken.isRevoked());
+        dto.setDeviceId(refreshToken.getDeviceId());
+        dto.setUserAgent(refreshToken.getUserAgent());
+        dto.setIpAddress(refreshToken.getIpAddress());
+        return dto;
+    }
 }
+

@@ -1,47 +1,54 @@
-package com.chatapp.synk.service.impl;
+﻿package com.chatapp.synk.service.impl;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.dto.AuthDTO;
+import com.chatapp.synk.dto.RefreshTokenDto;
 import com.chatapp.synk.dto.RefreshTokenRequest;
 import com.chatapp.synk.dto.UserDTO;
+import com.chatapp.synk.entity.RefreshToken;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.repository.ContactRepository;
+import com.chatapp.synk.repository.RefreshTokenRepository;
 import com.chatapp.synk.repository.UserRepository;
-import com.chatapp.synk.repository.UserRoleRepository;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.security.JwtUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.service.AuthService;
 import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.util.HashUtil;
 import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.MaskIdentifierUtil;
 import com.chatapp.synk.util.PasswordUtil;
 import com.chatapp.synk.util.StringUtil;
 
+@Service
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final UserService userService;
 
     // Injects authentication dependencies used by this service.
-    public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-            UserService userService) {
+    public AuthServiceImpl(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
+            PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserService userService) {
         this.userRepository = userRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -107,8 +114,8 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtUtil.generateAccessToken(claims, user.getPhoneNumber());
         String refreshToken = jwtUtil.generateRefreshToken(user.getPhoneNumber());
 
-        // Save refresh token for later validation
-        // refreshTokenService.saveRefreshToken(refreshToken, user.getUsername());
+        RefreshTokenDto refreshTokenDto = buildRefreshTokenDto(refreshToken, user.getId());
+        saveRefreshToken(refreshTokenDto);
 
         if (logger.isDebugEnabled()) {
             logger.debug("JWT token generated for user: {}", MaskIdentifierUtil.maskIdentifier(user.getPhoneNumber()));
@@ -151,6 +158,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String refreshToken = request.getRefreshToken();
+        // internally validating token signature
         String username = jwtUtil.extractUsername(refreshToken);
         if (StringUtil.isBlank(username)) {
             throw new InvalidTokenException("Refresh token validation failed - username not found");
@@ -170,7 +178,29 @@ public class AuthServiceImpl implements AuthService {
                 role, user.getEmail(), user.getProfilePictureUrl(), user.getId());
     }
 
-    // Loads the user referenced by a refresh token or raises an invalid-token error.
+    @Override
+    @Transactional
+    public RefreshTokenDto saveRefreshToken(RefreshTokenDto refreshTokenDto) {
+        if (refreshTokenDto == null) {
+            throw new ServiceException("Refresh token data is required", HttpStatus.BAD_REQUEST);
+        }
+        if (StringUtil.isBlank(refreshTokenDto.getUserId())) {
+            throw new ServiceException("Refresh token user ID is required", HttpStatus.BAD_REQUEST);
+        }
+        if (StringUtil.isBlank(refreshTokenDto.getTokenHash())) {
+            throw new ServiceException("Refresh token hash is required", HttpStatus.BAD_REQUEST);
+        }
+        if (refreshTokenDto.getExpiresAt() == null) {
+            throw new ServiceException("Refresh token expiry is required", HttpStatus.BAD_REQUEST);
+        }
+
+        RefreshToken refreshToken = Mapper.mapToRefreshTokenEntity(refreshTokenDto);
+        RefreshToken savedRefreshToken = refreshTokenRepository.save(refreshToken);
+        return Mapper.mapToRefreshTokenDto(savedRefreshToken);
+    }
+
+    // Loads the user referenced by a refresh token or raises an invalid-token
+    // error.
     private UserDTO getUserForRefreshToken(String username) {
         try {
             return userService.getUserByPhoneNumberOrEmail(username);
@@ -209,4 +239,19 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    private RefreshTokenDto buildRefreshTokenDto(String refreshToken, String userId) {
+        String hashedRefreshToken = HashUtil.hashWithSha256(refreshToken);
+        Claims claims = jwtUtil.getTokenClaims(refreshToken);
+        RefreshTokenDto refreshTokenDto = new RefreshTokenDto();
+        refreshTokenDto.setUserId(userId);
+        refreshTokenDto.setTokenHash(hashedRefreshToken);// always store hash of token in db
+        refreshTokenDto.setIssuedAt(toInstant(claims.getIssuedAt()));
+        refreshTokenDto.setExpiresAt(toInstant(claims.getExpiration()));
+        refreshTokenDto.setRevoked(false);
+        return refreshTokenDto;
+    }
+
+    private Instant toInstant(Date date) {
+        return date != null ? date.toInstant() : null;
+    }
 }

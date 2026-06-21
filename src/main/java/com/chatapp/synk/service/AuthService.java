@@ -1,6 +1,7 @@
 package com.chatapp.synk.service;
 
 import com.chatapp.synk.dto.AuthDTO;
+import com.chatapp.synk.dto.RefreshTokenDto;
 import com.chatapp.synk.dto.RefreshTokenRequest;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.security.JwtResponse;
@@ -12,4 +13,8 @@ public interface AuthService {
     JwtResponse authenticate(AuthDTO authDTO);
 
     JwtResponse refreshToken(RefreshTokenRequest request);
+
+    RefreshTokenDto saveRefreshToken(RefreshTokenDto refreshTokenDto);
 }
+
+

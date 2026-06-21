@@ -26,13 +26,14 @@ public class RedisSessionStore {
     }
 
     public void saveUserSession(String userId, String serverId, String wsSessionId) {
-        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        String redisLookupKey = ChatUtil.buildUserKey(userId);// "user:{userid}"
 
         Map<String, Object> map = new HashMap<>();
         map.put("serverId", serverId);
         map.put("sessionId", wsSessionId);
 
-        redisTemplate.opsForHash().putAll(redisLookupKey, map);//"user:{userId}" → { serverId: "abc123", sessionId: "xyz789" }
+        redisTemplate.opsForHash().putAll(redisLookupKey, map);// "user:{userId}" → { serverId: "abc123", sessionId:
+                                                               // "xyz789" }
         logger.debug("Saved session for userId={} with serverId={} and sessionId={}", userId, serverId, wsSessionId);
     }
 
@@ -44,7 +45,7 @@ public class RedisSessionStore {
     }
 
     public String getUserServerId(String userId) {
-        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        String redisLookupKey = ChatUtil.buildUserKey(userId);// "user:{userid}"
         Object v = redisTemplate.opsForHash().get(redisLookupKey, "serverId");
         String serverId = v != null ? v.toString() : null;
         logger.debug("Lookup serverId for userId={} -> {}", userId, serverId);
@@ -52,7 +53,7 @@ public class RedisSessionStore {
     }
 
     public String getUserSessionId(String userId) {
-        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        String redisLookupKey = ChatUtil.buildUserKey(userId);// "user:{userid}"
         Object v = redisTemplate.opsForHash().get(redisLookupKey, "sessionId");
         String sessionId = v != null ? v.toString() : null;
         logger.debug("Lookup sessionId for userId={} -> {}", userId, sessionId);
@@ -60,20 +61,40 @@ public class RedisSessionStore {
     }
 
     public void deleteUserSession(String userId) {
-        String redisLookupKey = ChatUtil.buildUserKey(userId);//"user:{userid}"
+        String redisLookupKey = ChatUtil.buildUserKey(userId);// "user:{userid}"
         redisTemplate.delete(redisLookupKey);
         logger.debug("Deleted session for userId={} with redisLookupKey={}", userId, redisLookupKey);
     }
 
     public void updateLastActiveTimestamp(String userid) {
-        String redisLookupKey = ChatUtil.buildUserLastActiveKey(userid);
-        redisTemplate.opsForHash().put(redisLookupKey, "lastActive", Instant.now().toEpochMilli());
+        // REDIS ROOT DATABASE
+        // ├── HASH KEY: "user:lastActive:101"
+        // │ └── Field: "lastActive" ──> Value: "1781267319000"
+        // │
+        // ├── HASH KEY: "user:lastActive:102"
+        // │ └── Field: "lastActive" ──> Value: "1781267322000"
+        // │
+        // └── HASH KEY: "user:lastActive:103"
+        // └── Field: "lastActive" ──> Value: "1781267325000"
+        // String redisLookupKey = ChatUtil.buildUserLastActiveKey(userid); //->this
+        // approach creates seprate keys as per above commnet not memory efficient
+        // redisTemplate.opsForHash().put(redisLookupKey,
+        // "lastActive",Instant.now().toEpochMilli());
+
+        /** optimised way to store keys in redis which saves memory */
+        // REDIS ROOT DATABASE
+        // └── HASH KEY: "user:lastActive" (Only ONE parent key exists)
+        // ├── Field: "101" ──> Value: "1781267319000"
+        // ├── Field: "102" ──> Value: "1781267322000"
+        // └── Field: "103" ──> Value: "1781267325000"
+        String redisLookupKey = ChatUtil.USER_LAST_ACTIVE_KEY;
+        redisTemplate.opsForHash().put(redisLookupKey, userid, Instant.now().toEpochMilli());
         logger.debug("Updated lastActive for userId={} to {}", userid, Instant.now());
     }
 
     public String getLastActiveTimeStampUser(String userid) {
-        String redisLookupKey = ChatUtil.buildUserLastActiveKey(userid);
-        Object v = redisTemplate.opsForHash().get(redisLookupKey, "lastActive");
+        String redisLookupKey = ChatUtil.USER_LAST_ACTIVE_KEY;
+        Object v = redisTemplate.opsForHash().get(redisLookupKey, userid);
         String lastActive = v != null ? v.toString() : null;
         logger.debug("Lookup lastActive for userId={} -> {}", userid, lastActive);
         return lastActive;
