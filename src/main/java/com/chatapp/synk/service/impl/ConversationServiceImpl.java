@@ -79,17 +79,18 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Cacheable(value = "conversationIdLookupCache", key = "T(com.yourpackage.SecurityUtil).getCurrentUserIdFromSecurityContext() + '_' + #contactUserId", unless = "#result == null")
-    @Transactional//make all db calls as one automic transaction
+    @Cacheable(value = "conversationIdLookupCache", key = "T(com.chatapp.synk.security.SecurityUtil).getCurrentUserIdFromSecurityContext() + '_' + #contactUserId", unless = "#result == null")
+    @Transactional // make all db calls as one automic transaction
     public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserId, contactUserId);
-        }
 
         // String loggedInUserValidId = InputSecurityUtils.secureId(loggedInUserId);
         // Authorization check getting token from security context setted in jwt util
         String loggedInUserValidId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         String contactUserValidId = InputSecurityUtils.secureId(contactUserId);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserValidId, contactUserId);
+        }
 
         if (loggedInUserValidId.equals(contactUserValidId)) {
             throw new ServiceException("Cannot create conversation with yourself");
@@ -106,7 +107,7 @@ public class ConversationServiceImpl implements ConversationService {
 
         String newConversationId = RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString();
         Conversation conversation = new Conversation(newConversationId, ConversationType.ONE_TO_ONE.toString());
-        //db call
+        // db call
         conversationRepository.save(conversation);
 
         logger.info("New conversation [{}] created between [{}] and [{}]",

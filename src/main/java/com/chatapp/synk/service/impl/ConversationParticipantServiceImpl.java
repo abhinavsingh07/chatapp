@@ -60,7 +60,7 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
     }
 
     @Override
-    @Cacheable(value = "participantCache", key = "#conversationId", unless = "#result == null or #result.isEmpty()")
+    @Cacheable(value = "participantListCache", key = "#conversationId", unless = "#result == null or #result.isEmpty()")
     public List<ConversationParticipantDTO> getParticipantsByConversationId(String conversationId) {
         if (logger.isDebugEnabled()) {
             logger.debug("Fetching participants for conversation ID: {}", conversationId.trim());

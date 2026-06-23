@@ -50,20 +50,18 @@ public class UserServiceImpl implements UserService {
     private final ContactRepository contactRepository;
     private final UserRoleRepository userRoleRepository;
     private final RedisSessionStore redisSessionStore;
-    private final JwtUtil jwtUtil;
 
     public UserServiceImpl(UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ContactRepository contactRepository,
             UserRoleRepository userRoleRepository,
-            RedisSessionStore redisSessionStore,
-            JwtUtil jwtUtil) {
+            RedisSessionStore redisSessionStore) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.contactRepository = contactRepository;
         this.userRoleRepository = userRoleRepository;
         this.redisSessionStore = redisSessionStore;
-        this.jwtUtil = jwtUtil;
+
     }
 
     @Override
@@ -78,6 +76,7 @@ public class UserServiceImpl implements UserService {
         return allUsers;
     }
 
+    //This method using in customUserDetailsService
     @Override
     public UserDTO getUserByPhoneNumberOrEmail(String phoneNumberOrEmail) {
         Optional<UserDTO> result;
@@ -129,7 +128,8 @@ public class UserServiceImpl implements UserService {
     })
     public UserDTO registerUser(UserDTO userDTO) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Registering new user with identifier: {}", MaskIdentifierUtil.maskIdentifier(userDTO.getPhoneNumber()));
+            logger.debug("Registering new user with identifier: {}",
+                    MaskIdentifierUtil.maskIdentifier(userDTO.getPhoneNumber()));
         }
         try {
             UserDTO validatedDTO = InputValidationAndSanitizationService.validateAndSanitize(userDTO);
@@ -157,18 +157,6 @@ public class UserServiceImpl implements UserService {
             // runtimeexception so it will work
             logger.error("Unexpected error during user creation", ex);
             throw new ServiceException("User creation failed", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    private void handleInvitedFlow(User savedUser) {
-        logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
-        List<Contact> contacts = contactRepository.findByEmailAndContactUserIdIsNull(savedUser.getEmail());
-        if (!contacts.isEmpty()) {
-            int updatedCount = contactRepository.updateContactUserIdByEmail(
-                    savedUser.getId(),
-                    ContactStatus.ADDED,
-                    savedUser.getEmail());
-            logger.info("Updated contactUserId for {} contacts matching email {}", updatedCount, savedUser.getEmail());
         }
     }
 
@@ -219,49 +207,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void updatePasswordIfRequested(User user, UserDTO userDTO) {
-        boolean passwordUpdateRequested = !StringUtil.isBlank(userDTO.getOldPassword())
-                || !StringUtil.isBlank(userDTO.getNewPassword())
-                || !StringUtil.isBlank(userDTO.getConfirmPassword());
-
-        if (!passwordUpdateRequested) {
-            return;
-        }
-
-        String oldPassword = InputSecurityUtils.securePassword(userDTO.getOldPassword());
-        String newPassword = InputSecurityUtils.securePassword(userDTO.getNewPassword());
-        String confirmPassword = InputSecurityUtils.securePassword(userDTO.getConfirmPassword());
-
-        if (StringUtil.isBlank(oldPassword) || StringUtil.isBlank(newPassword) || StringUtil.isBlank(confirmPassword)) {
-            throw new ServiceException("Old password, new password, and confirm password are required",
-                    HttpStatus.BAD_REQUEST);
-        }
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new ServiceException("Old password is incorrect", HttpStatus.BAD_REQUEST);
-        }
-        if (!newPassword.equals(confirmPassword)) {
-            throw new ServiceException("New password and confirm password do not match", HttpStatus.BAD_REQUEST);
-        }
-        if (!PasswordUtil.isStrongPassword(newPassword)) {
-            throw new ServiceException(
-                    "New password must be at least 8 characters and include uppercase, lowercase, and a digit",
-                    HttpStatus.BAD_REQUEST);
-        }
-        if (oldPassword.equals(newPassword)) {
-            throw new ServiceException("New password must be different from old password", HttpStatus.BAD_REQUEST);
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-    }
-
- 
-
     @Override
-    @Caching(put = {
-            @CachePut(value = "userCache", key = "#userId", unless = "#result == null")
-    }, evict = {
-            @CacheEvict(value = "userListCache", key = "'allUsers'", beforeInvocation = true)
-    })
     public UserDTO updateLastSeen(String userId) {
         logger.debug("Updating last seen for user ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
@@ -279,14 +225,6 @@ public class UserServiceImpl implements UserService {
         // save to db
         User updatedUser = userRepository.save(user);
         return Mapper.mapToUserDTO(updatedUser);
-    }
-
-    private Instant parseLastActiveInstant(String lastActive) {
-        try {
-            return Instant.ofEpochMilli(Long.parseLong(lastActive));
-        } catch (NumberFormatException ex) {
-            throw new ServiceException("Invalid last active timestamp", HttpStatus.BAD_REQUEST);
-        }
     }
 
     @Override
@@ -323,5 +261,60 @@ public class UserServiceImpl implements UserService {
             }
         }
         return result;
+    }
+
+    private void handleInvitedFlow(User savedUser) {
+        logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
+        List<Contact> contacts = contactRepository.findByEmailAndContactUserIdIsNull(savedUser.getEmail());
+        if (!contacts.isEmpty()) {
+            int updatedCount = contactRepository.updateContactUserIdByEmail(
+                    savedUser.getId(),
+                    ContactStatus.ADDED,
+                    savedUser.getEmail());
+            logger.info("Updated contactUserId for {} contacts matching email {}", updatedCount, savedUser.getEmail());
+        }
+    }
+
+    private void updatePasswordIfRequested(User user, UserDTO userDTO) {
+        boolean passwordUpdateRequested = !StringUtil.isBlank(userDTO.getOldPassword())
+                || !StringUtil.isBlank(userDTO.getNewPassword())
+                || !StringUtil.isBlank(userDTO.getConfirmPassword());
+
+        if (!passwordUpdateRequested) {
+            return;
+        }
+
+        String oldPassword = InputSecurityUtils.securePassword(userDTO.getOldPassword());
+        String newPassword = InputSecurityUtils.securePassword(userDTO.getNewPassword());
+        String confirmPassword = InputSecurityUtils.securePassword(userDTO.getConfirmPassword());
+
+        if (StringUtil.isBlank(oldPassword) || StringUtil.isBlank(newPassword) || StringUtil.isBlank(confirmPassword)) {
+            throw new ServiceException("Old password, new password, and confirm password are required",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new ServiceException("Old password is incorrect", HttpStatus.BAD_REQUEST);
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ServiceException("New password and confirm password do not match", HttpStatus.BAD_REQUEST);
+        }
+        if (!PasswordUtil.isStrongPassword(newPassword)) {
+            throw new ServiceException(
+                    "New password must be at least 8 characters and include uppercase, lowercase, and a digit",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (oldPassword.equals(newPassword)) {
+            throw new ServiceException("New password must be different from old password", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+    }
+
+    private Instant parseLastActiveInstant(String lastActive) {
+        try {
+            return Instant.ofEpochMilli(Long.parseLong(lastActive));
+        } catch (NumberFormatException ex) {
+            throw new ServiceException("Invalid last active timestamp", HttpStatus.BAD_REQUEST);
+        }
     }
 }

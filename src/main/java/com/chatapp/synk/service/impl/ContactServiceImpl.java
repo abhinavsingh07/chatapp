@@ -12,6 +12,7 @@ import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.EmailStatus;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ContactRepository;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ContactService;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.Mapper;
@@ -27,11 +28,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 @Service
 public class ContactServiceImpl implements ContactService {
@@ -52,16 +51,10 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
-    @Cacheable(value = "contactListCache", key = "#userId", unless = "#result == null || #result.isEmpty()")
-    public List<ContactDTO> getContactsByUserId(String userId) {
-        List<Contact> contactList = contactRepository.findAllByUserId(userId.trim());
-        return contactList.stream().filter(Objects::nonNull).map(Mapper::mapToContactDTO).collect(Collectors.toList());
-    }
-
-    @Override
     @Cacheable(value = "contactListCache", key = "#userId != null && !#userId.isEmpty() ? #userId : 'ALL_CONTACTS'", unless = "#result == null || #result.isEmpty()")
     public List<ContactUserDTO> getContacts(String userId) {
-        String validId = InputSecurityUtils.secureId(userId);
+        String validId=SecurityUtil.getCurrentUserIdFromSecurityContext();
+        // String validId = InputSecurityUtils.secureId(userId);
         if (validId != null && !validId.isEmpty()) {
             return contactRepository.findContactUserDetailsByUserId(userId.trim());
         } else {
@@ -109,10 +102,10 @@ public class ContactServiceImpl implements ContactService {
 
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
-            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) }, put = {
-                    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
+    @Caching(
+    evict = {@CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
+             @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) },
+    put =   {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
     public ContactDTO addContact(ContactDTO dto) {
         ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
         String userId = validDTO.getUserId();//userid is of who is adding contact

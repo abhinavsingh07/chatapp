@@ -2,6 +2,7 @@ package com.chatapp.synk.service.impl;
 
 import com.chatapp.synk.dto.ConversationLastMsgDTO;
 import com.chatapp.synk.repository.ConversationLastMessageRepository;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import org.slf4j.Logger;
@@ -30,13 +31,15 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
         Instant sentAt = Instant.now();
         Instant updatedAt = Instant.now();
         logger.info("Upserting last message for conversationId={}, messageId={}", conversationValidId, messageValidId);
-        conversationLastMessageRepository.upsertLastMessage(conversationValidId, messageValidId, senderValidId, safeContent, sentAt, updatedAt);
+        conversationLastMessageRepository.upsertLastMessage(conversationValidId, messageValidId, senderValidId,
+                safeContent, sentAt, updatedAt);
         logger.info("Successfully upserted last message for conversationId={}", conversationValidId);
     }
 
     @Override
     public List<ConversationLastMsgDTO> findUserConversations(String loggedInUserId) {
-        String validUserId = InputSecurityUtils.secureId(loggedInUserId);
+        String validUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        // String validUserId = InputSecurityUtils.secureId(loggedInUserId);
         logger.info("Fetching chat list for userId={}", validUserId);
         List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository.findUserConversations(validUserId);
         logger.info("Fetched {} conversations for userId={}", chatList.size(), validUserId);

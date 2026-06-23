@@ -20,31 +20,50 @@ public interface ContactRepository extends JpaRepository<Contact, String> {
     List<Contact> findByEmailAndContactUserIdIsNull(String email);
 
     @Query("""
-    SELECT new com.chatapp.synk.dto.ContactUserDTO(
-        c.id,
-        c.contactStatus,
-        c.emailStatus,
-        c.contactUserId,
-        c.email,
-        u.name,
-        u.phoneNumber,
-        u.email,
-        u.profilePictureUrl,
-        u.status,
-        c.userId
-    )
-    FROM Contact c
-    LEFT JOIN User u ON c.contactUserId = u.id
-    WHERE c.userId = :userId
-    """)
+            SELECT new com.chatapp.synk.dto.ContactUserDTO(
+                c.id,
+                c.contactStatus,
+                c.emailStatus,
+                c.contactUserId,
+                c.email,
+                u.name,
+                u.phoneNumber,
+                u.email,
+                u.profilePictureUrl,
+                u.status,
+                c.userId
+            )
+            FROM Contact c
+            LEFT JOIN User u ON c.contactUserId = u.id
+            WHERE c.userId = :userId
+            """)
     List<ContactUserDTO> findContactUserDetailsByUserId(@Param("userId") String userId);
 
-    @Query("SELECT new com.chatapp.synk.dto.ContactUserDTO(" + "c.id, c.contactStatus, c.emailStatus, c.contactUserId, c.email, " + "u.name, u.phoneNumber, u.email, u.profilePictureUrl, u.status,c.userId) " + "FROM Contact c JOIN User u ON c.contactUserId = u.id")
+    @Query("""
+         SELECT new com.chatapp.synk.dto.ContactUserDTO(
+            c.id,
+            c.contactStatus,
+            c.emailStatus,
+            c.contactUserId,
+            c.email,
+            u.name,
+            u.phoneNumber,
+            u.email,
+            u.profilePictureUrl,
+            u.status,c.userId) 
+            FROM Contact
+            c JOIN
+            User u
+            ON c.contactUserId=u.id
+        """)
+
     List<ContactUserDTO> findAllContactsWithUserDetails();
 
     @Modifying
     @Query("UPDATE Contact c SET c.contactUserId = :userId,c.contactStatus=:contactStatus WHERE c.email = :email AND c.contactUserId IS NULL")
-    int updateContactUserIdByEmail(@Param("userId") String userId, @Param("contactStatus") ContactStatus contactStatus, @Param("email") String email);
+    int updateContactUserIdByEmail(@Param("userId") String userId, @Param("contactStatus") ContactStatus contactStatus,
+            @Param("email") String email);
 
-    boolean existsByUserIdAndContactUserIdAndContactStatus(String userId, String contactUserId, ContactStatus contactStatus);
+    boolean existsByUserIdAndContactUserIdAndContactStatus(String userId, String contactUserId,
+            ContactStatus contactStatus);
 }

@@ -91,7 +91,7 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<SuccessResponse<UserDTO>> getUserMe() {
-
+        //fetching userid from security context setting in jwtAuthFilter
         String userId = SecurityUtil.getCurrentUserIdFromSecurityContext();
 
         if (userId == null || userId.isBlank()) {
