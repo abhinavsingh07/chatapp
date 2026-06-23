@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -26,11 +27,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<ErrorResponse<Void>> handleServiceException(ServiceException exception) {
+        logger.warn("ServiceException occurred: {} stack trance: {}", exception.getMessage(),ex);
         HttpStatus status = exception.getStatus() != null
                 ? exception.getStatus()
                 : HttpStatus.INTERNAL_SERVER_ERROR;
-
-        logger.warn("A ServiceException occurred: {}", exception.getMessage());
 
         return ResponseEntity.status(status)
                 .body(new ErrorResponse<Void>(
@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ErrorResponse<Void>> handleInvalidToken(InvalidTokenException ex) {
-        logger.warn("Invalid token: {}", ex.getMessage());
+        logger.warn("InvalidTokenException occured: {} stack trace: {}", ex.getMessage(), ex);
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse<Void>(
@@ -50,14 +50,26 @@ public class GlobalExceptionHandler {
                         ex.getMessage()));
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
+        logger.warn("AccessDeniedException occured: {} stack trace: {}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse<Void>(
+                        HttpStatus.FORBIDDEN.value(),
+                        HttpStatus.FORBIDDEN,
+                        ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class) // catches Runtime Exception as well
     public ResponseEntity<ErrorResponse<Void>> handleOtherExceptions(Exception ex) {
-        logger.error("Exception occured: {}", ex.getMessage());
-        ErrorResponse<Void> errResp = new ErrorResponse<Void>();
-        errResp.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errResp.setErrorMessage(ex.getMessage());
-        logger.error("An unexpected Exception occurred: {}", ex.getMessage());
-        return new ResponseEntity<>(errResp, HttpStatus.INTERNAL_SERVER_ERROR);
+        logger.error("Exception occured: {} stack trace: {}", ex.getMessage(), ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse<Void>(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

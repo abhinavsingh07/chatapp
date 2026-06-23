@@ -6,8 +6,10 @@ import com.chatapp.synk.dto.ConversationDTO;
 import com.chatapp.synk.entity.Conversation;
 import com.chatapp.synk.entity.ConversationParticipant;
 import com.chatapp.synk.enums.ConversationType;
+import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
 import com.chatapp.synk.repository.ConversationRepository;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ConversationService;
 import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.RandomUUIDGenerater;
@@ -17,6 +19,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,14 +34,15 @@ public class ConversationServiceImpl implements ConversationService {
     private final ConversationRepository conversationRepository;
     private final ConversationParticipantRepository participantRepository;
 
-    public ConversationServiceImpl(ConversationRepository conversationRepository, ConversationParticipantRepository participantRepository) {
+    public ConversationServiceImpl(ConversationRepository conversationRepository,
+            ConversationParticipantRepository participantRepository) {
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
     }
 
     @Override
-    @Caching(put = {@CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null")},
-            evict = {@CacheEvict(value = "conversationCache", key = "'allConversations'", beforeInvocation = true)})
+    @Caching(put = { @CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null") }, evict = {
+            @CacheEvict(value = "conversationCache", key = "'allConversations'", beforeInvocation = true) })
     public ConversationDTO createConversation(ConversationDTO dto) {
         ConversationDTO validTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
         Conversation entity = Mapper.mapToConversationEntity(validTO);
@@ -75,15 +79,21 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Cacheable(value = "conversationIdLookupCache", key = "#loggedInUserId + '_' + #contactUserId", unless = "#result == null")
-    @Transactional
+    @Cacheable(value = "conversationIdLookupCache", key = "T(com.yourpackage.SecurityUtil).getCurrentUserIdFromSecurityContext() + '_' + #contactUserId", unless = "#result == null")
+    @Transactional//make all db calls as one automic transaction
     public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
         if (logger.isDebugEnabled()) {
             logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserId, contactUserId);
         }
 
-        String loggedInUserValidId = InputSecurityUtils.secureId(loggedInUserId);
+        // String loggedInUserValidId = InputSecurityUtils.secureId(loggedInUserId);
+        // Authorization check getting token from security context setted in jwt util
+        String loggedInUserValidId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         String contactUserValidId = InputSecurityUtils.secureId(contactUserId);
+
+        if (loggedInUserValidId.equals(contactUserValidId)) {
+            throw new ServiceException("Cannot create conversation with yourself");
+        }
 
         String conversationId = conversationRepository.findConversationIdByUserIdAndContactUserId(
                 loggedInUserValidId, contactUserValidId);
@@ -96,15 +106,20 @@ public class ConversationServiceImpl implements ConversationService {
 
         String newConversationId = RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString();
         Conversation conversation = new Conversation(newConversationId, ConversationType.ONE_TO_ONE.toString());
+        //db call
         conversationRepository.save(conversation);
 
         logger.info("New conversation [{}] created between [{}] and [{}]",
                 newConversationId, loggedInUserId, contactUserId);
 
         List<ConversationParticipant> participants = List.of(
-                new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, loggedInUserId),
-                new ConversationParticipant(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(), newConversationId, contactUserId)
-        );
+                new ConversationParticipant(
+                        RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
+                        newConversationId, loggedInUserId),
+                new ConversationParticipant(
+                        RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
+                        newConversationId, contactUserId));
+        // db call
         participantRepository.saveAll(participants);
 
         logger.info("Participants [{}] and [{}] added to conversation [{}]",
@@ -113,4 +128,3 @@ public class ConversationServiceImpl implements ConversationService {
         return newConversationId;
     }
 }
-

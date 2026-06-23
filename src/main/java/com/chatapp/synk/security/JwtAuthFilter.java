@@ -68,7 +68,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     // This is much more efficient than parsing the token multiple times
                     Claims claims = jwtUtil.getTokenClaims(token);
 
-                    String username = claims.getSubject();
+                    String userId = (String) claims.get("id");//as while issuesing token we are storing in this key
                     @SuppressWarnings("unchecked")
                     List<String> roles = (List<String>) claims.get("roles");
 
@@ -87,7 +87,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             .collect(Collectors.toList());
 
                     // Build Authentication object directly from JWT claims
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(username,
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userId,
                             null, authorities);
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

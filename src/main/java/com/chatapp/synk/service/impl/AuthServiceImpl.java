@@ -10,6 +10,10 @@ import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +27,10 @@ import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.RefreshTokenRepository;
 import com.chatapp.synk.repository.UserRepository;
+import com.chatapp.synk.security.CustomUserDetails;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.security.JwtUtil;
+import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.service.AuthService;
@@ -37,24 +43,25 @@ import com.chatapp.synk.util.StringUtil;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final UserService userService;
+    private final AuthenticationManager authenticationManager;
 
-    // Injects authentication dependencies used by this service.
     public AuthServiceImpl(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserService userService) {
+            PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserService userService,
+            AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userService = userService;
+        this.authenticationManager = authenticationManager;
     }
-
-    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     // Resets a user's password after validating the forgot-password request.
     @Override
@@ -98,9 +105,11 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthDTO sanitizedDTO = InputValidationAndSanitizationService.validateAndSanitize(authDTO);
-        UserDTO user = authenticate(sanitizedDTO.getPhoneNumberOrEmail(), sanitizedDTO.getPassword());
+        
+        Authentication auth = authenticate(sanitizedDTO.getPhoneNumberOrEmail(), sanitizedDTO.getPassword());
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
 
-        String role = user.getRoleName() != null ? user.getRoleName().name() : "";
+        String role = user.getUserRoles() != null ? user.getUserRoles() : "";
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", role.isEmpty() ? List.of() : List.of(role));
         claims.put("id", user.getId());
@@ -110,15 +119,15 @@ public class AuthServiceImpl implements AuthService {
         // other details
         // claims.put("email", user.getEmail());
         // claims.put("name", user.getName());//dont store in jwt
-        //generate tokens
-        String token = jwtUtil.generateAccessToken(claims, user.getPhoneNumber());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getPhoneNumber());
+        // generate tokens
+        String token = jwtUtil.generateAccessToken(claims, user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         // save refresh token on login
         RefreshTokenDto refreshTokenDto = buildRefreshTokenDto(refreshToken, user.getId());
         saveRefreshToken(refreshTokenDto);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("JWT token generated for user: {}", MaskIdentifierUtil.maskIdentifier(user.getPhoneNumber()));
+            logger.debug("JWT token generated for user: {}", MaskIdentifierUtil.maskIdentifier(user.getUsername()));
         }
 
         return new JwtResponse(token, refreshToken, user.getEmail(), user.getName(),
@@ -126,27 +135,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // Validates the username and password against the stored user credentials.
-    private UserDTO authenticate(String username, String password) throws ServiceException {
+    private Authentication authenticate(String username, String password) throws ServiceException {
         try {
             if (logger.isDebugEnabled()) {
-                logger.debug("Attempting authentication for user: {}", MaskIdentifierUtil.maskIdentifier(username));
+                logger.debug("Attempting authentication for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
             }
 
-            UserDTO user = userService.getUserByPhoneNumberOrEmail(username);
-            if (!passwordEncoder.matches(password, user.getPassword())) {
-                logger.warn("Authentication failed - invalid credentials for user: {}",
-                        MaskIdentifierUtil.maskIdentifier(username));
-                throw new ServiceException("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED);
-            }
+            Authentication auth = authenticationManager
+                    .authenticate(new PhoneNumberAuthenticationToken(username, password));
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Authentication successful for user: {}", MaskIdentifierUtil.maskIdentifier(username));
+                logger.debug("Authentication successful for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
             }
-            return user;
-        } catch (ServiceException e) {
-            logger.warn("Authentication failed - invalid credentials for user: {}",
-                    MaskIdentifierUtil.maskIdentifier(username));
-            throw new ServiceException("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED);
+            return auth;
+        } catch (DisabledException e) {
+            logger.warn("Authentication failed - account disabled for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+            throw new ServiceException("USER_DISABLED", e);
+        } catch (BadCredentialsException e) {
+            logger.warn("Authentication failed - invalid credentials for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+            throw new ServiceException("INVALID_CREDENTIALS", e);
         }
     }
 
@@ -215,7 +222,9 @@ public class AuthServiceImpl implements AuthService {
         if (revokedCount == 0) {
             throw new ServiceException("Refresh token not found", HttpStatus.NOT_FOUND);
         }
+        logger.info("Refresh token revoked successfully.");
     }
+
     // Loads the user referenced by a refresh token or raises an invalid-token
     // error.
     private RefreshToken getStoredRefreshToken(String refreshToken) {
@@ -223,6 +232,7 @@ public class AuthServiceImpl implements AuthService {
         return refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new InvalidTokenException("Refresh token validation failed - token not found"));
     }
+
     private UserDTO getUserForRefreshToken(String username) {
         try {
             return userService.getUserByPhoneNumberOrEmail(username);

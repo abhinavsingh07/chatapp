@@ -40,6 +40,7 @@ public class PhoneNumberAuthenticationProvider implements AuthenticationProvider
         this.passwordEncoder = passwordEncoder;
     }
 
+    //this method calls from AuthServiceImpl authenticationManager.authenticate
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         String identifier = authentication.getPrincipal().toString().trim(); // could be phone or email
@@ -47,6 +48,7 @@ public class PhoneNumberAuthenticationProvider implements AuthenticationProvider
 
         UserDetails userDetails;
         try {
+            //this calls our customUserDetailsService as we have given our impl
             userDetails = userDetailsService.loadUserByUsername(identifier);
         } catch (UsernameNotFoundException ex) {
             logger.error("User not found for identifier: {}", identifier);

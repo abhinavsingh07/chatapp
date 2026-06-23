@@ -37,7 +37,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found with identifier: " + phoneNumberOrEmail);
         }
 
-        logger.info("loadUserByUsername successful: identifier={}, phone={}, role={}", phoneNumberOrEmail, userDTO.getPhoneNumber(), "ROLE_USER");
+        logger.debug("loadUserByUsername successful: identifier={}, phone={}, role={}", phoneNumberOrEmail, userDTO.getPhoneNumber(), "ROLE_USER");
         //Now not storing ROLE_USER todo to save in db
         return new CustomUserDetails(
                 userDTO.getPhoneNumber(),

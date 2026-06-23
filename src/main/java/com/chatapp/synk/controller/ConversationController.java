@@ -74,7 +74,9 @@ public class ConversationController {
 
         if (conversationId == null) {
             logger.error("Failed to create or fetch conversation between {} and {}", fromUserId, toUserId);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new SuccessResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create or fetch conversation", null));
+            return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new SuccessResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create or fetch conversation", null));
         }
 
         logger.info("Conversation {} found/created successfully between {} and {}", conversationId, fromUserId, toUserId);
