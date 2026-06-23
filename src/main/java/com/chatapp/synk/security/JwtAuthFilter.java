@@ -93,7 +93,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     // Set user details in request attribute for later use in controllers
-                    request.setAttribute("userDetails", claims);
+                    //request.setAttribute("userDetails", claims);
                     SecurityContextHolder.getContext().setAuthentication(authToken);
 
                 } catch (InvalidTokenException ex) {

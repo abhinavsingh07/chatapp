@@ -20,7 +20,7 @@ public final class ChatUtil {
      */
     public static final String USER_KEY_PREFIX = "user:";
 
-    public static final String USER_LAST_ACTIVE_KEY = "user:lastActive:";
+    public static final String USER_LAST_ACTIVE_KEY = "user:lastActive";
 
     /**
      * Queue name prefix: server-queue.{serverId}

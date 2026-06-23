@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 @Component
 public class RedisSessionStore {
@@ -20,8 +19,6 @@ public class RedisSessionStore {
 
     public RedisSessionStore(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
-        Set<String> keys = redisTemplate.keys("user:lastActive:*");
-        logger.info("All keys with pattern 'lastActive' size: {}", keys.size());
 
     }
 
@@ -62,7 +59,11 @@ public class RedisSessionStore {
 
     public void deleteUserSession(String userId) {
         String redisLookupKey = ChatUtil.buildUserKey(userId);// "user:{userid}"
+        
         redisTemplate.delete(redisLookupKey);
+        // Clean up the last active field so RAM doesn't leak
+        redisTemplate.opsForHash().delete(ChatUtil.USER_LAST_ACTIVE_KEY, userId);
+        
         logger.debug("Deleted session for userId={} with redisLookupKey={}", userId, redisLookupKey);
     }
 
