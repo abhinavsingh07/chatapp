@@ -99,7 +99,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = "userCache", key = "#userId", unless = "#result == null")
     public UserDTO getUserById(String userId) {
-        logger.info("Fetching user by ID: {}", userId);
+        logger.debug("Fetching user by ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
 
         Optional<UserDTO> result = userRepository.findById(validId).map(Mapper::mapToUserDTO);
@@ -218,6 +218,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Update field
+        //saving epochmilli in db as well frontend parsethis correctly
         user.setUserlastSeen(lastActive);
 
         // Save to DB
@@ -314,13 +315,5 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
-    }
-
-    private Instant parseLastActiveInstant(String lastActive) {
-        try {
-            return Instant.ofEpochMilli(Long.parseLong(lastActive));
-        } catch (NumberFormatException ex) {
-            throw new ServiceException("Invalid last active timestamp", HttpStatus.BAD_REQUEST);
-        }
     }
 }
