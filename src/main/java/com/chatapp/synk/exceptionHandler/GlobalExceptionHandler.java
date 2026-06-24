@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<ErrorResponse<Void>> handleServiceException(ServiceException exception) {
-        logger.warn("ServiceException occurred: {} stack trance: {}", exception.getMessage(),ex);
+        logger.warn("ServiceException occurred: {} stack trance: {}", exception.getMessage(),exception);
         HttpStatus status = exception.getStatus() != null
                 ? exception.getStatus()
                 : HttpStatus.INTERNAL_SERVER_ERROR;

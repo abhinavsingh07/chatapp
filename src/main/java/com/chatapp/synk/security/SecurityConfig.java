@@ -55,7 +55,7 @@ public class SecurityConfig {
                                         "/swagger-ui/**",
                                         "/swagger-ui.html",
                                         "/actuator/**").permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().hasRole("USER")) //No, .authenticated() is not needed because .hasRole("USER") already implies that the user must be authenticated.
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthEntryPoint))
                 .authenticationProvider(authenticationProvider())

@@ -69,8 +69,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     Claims claims = jwtUtil.getTokenClaims(token);
 
                     String userId = (String) claims.get("id");//as while issuesing token we are storing in this key
-                    @SuppressWarnings("unchecked")
-                    List<String> roles = (List<String>) claims.get("roles");
+                    List<String> roles = (List<String>) claims.get("roles"); //as while issuesing token we are storing in this key
 
                     if (roles == null) {
                         roles = List.of();
