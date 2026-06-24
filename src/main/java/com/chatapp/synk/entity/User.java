@@ -3,8 +3,6 @@ package com.chatapp.synk.entity;
 import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.enums.UserStatus;
 import jakarta.persistence.*;
-
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -49,7 +47,7 @@ public class User {
     private RoleName userRole;
 
     @Column(name = "user_last_seen")
-    private Instant userlastSeen;
+    private String userlastSeen;
 
     // Constructors
     public User() {
@@ -158,11 +156,11 @@ public class User {
         this.email = email;
     }
 
-    public Instant getUserlastSeen() {
+    public String getUserlastSeen() {
         return userlastSeen;
     }
 
-    public void setUserlastSeen(Instant userlastSeen) {
+    public void setUserlastSeen(String userlastSeen) {
         this.userlastSeen = userlastSeen;
     }
 

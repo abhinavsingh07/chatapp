@@ -1,8 +1,6 @@
 package com.chatapp.synk.service.impl;
 
 import com.chatapp.synk.chat.redis.RedisSessionStore;
-import com.chatapp.synk.dto.AuthDTO;
-import com.chatapp.synk.dto.RefreshTokenRequest;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.entity.Contact;
@@ -10,13 +8,10 @@ import com.chatapp.synk.entity.User;
 import com.chatapp.synk.entity.UserRole;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.RoleName;
-import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.repository.UserRoleRepository;
-import com.chatapp.synk.security.JwtResponse;
-import com.chatapp.synk.security.JwtUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.security_validator.UserInputValidator;
@@ -76,7 +71,7 @@ public class UserServiceImpl implements UserService {
         return allUsers;
     }
 
-    //This method using in customUserDetailsService
+    // This method using in customUserDetailsService
     @Override
     public UserDTO getUserByPhoneNumberOrEmail(String phoneNumberOrEmail) {
         Optional<UserDTO> result;
@@ -104,7 +99,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = "userCache", key = "#userId", unless = "#result == null")
     public UserDTO getUserById(String userId) {
-        logger.debug("Fetching user by ID: {}", userId);
+        logger.info("Fetching user by ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
 
         Optional<UserDTO> result = userRepository.findById(validId).map(Mapper::mapToUserDTO);
@@ -211,19 +206,24 @@ public class UserServiceImpl implements UserService {
     public UserDTO updateLastSeen(String userId) {
         logger.debug("Updating last seen for user ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
-        // fetch user from db first
+
+        // Fetch user from DB first
         User user = userRepository.findById(validId)
                 .orElseThrow(() -> new ServiceException("User not found with ID", HttpStatus.NOT_FOUND));
 
-        // find lastactive time from redis
+        // Find lastactive time from redis
         String lastActive = redisSessionStore.getLastActiveTimeStampUser(validId);
         if (StringUtil.isBlank(lastActive)) {
             throw new ServiceException("Last active timestamp not found", HttpStatus.NOT_FOUND);
         }
-        // update field
-        user.setUserlastSeen(parseLastActiveInstant(lastActive));
-        // save to db
+
+        // Update field
+        user.setUserlastSeen(lastActive);
+
+        // Save to DB
         User updatedUser = userRepository.save(user);
+
+        // Cache gets populated with this returned UserDTO object
         return Mapper.mapToUserDTO(updatedUser);
     }
 
@@ -258,6 +258,12 @@ public class UserServiceImpl implements UserService {
             if (lastActive != null) {
                 boolean online = (now - Long.parseLong(lastActive)) <= 4000;// 4 seconds if user is offline
                 result.add(new UserStatusDTO(uid, online, lastActive));
+            } else {
+                UserDTO userdto = getUserById(uid);
+                if (userdto != null) {
+                    String lastActiveDB = userdto.getUserlastSeen();
+                    result.add(new UserStatusDTO(uid, false, lastActiveDB));
+                }
             }
         }
         return result;

@@ -16,7 +16,7 @@ public class Mapper {
         dto.setEmail(user.getEmail());
         dto.setStatus(user.getStatus());
         dto.setRoleName(user.getUserRole());
-        dto.setUserlastSeen(user.getUserlastSeen() != null ? user.getUserlastSeen().toString() : "");
+        dto.setUserlastSeen(user.getUserlastSeen());
         return dto;
     }
 
