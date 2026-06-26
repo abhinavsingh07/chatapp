@@ -143,14 +143,15 @@ public class UserServiceImpl implements UserService {
             UserDTO userdto = Mapper.mapToUserDTO(savedUser);
             userdto.setPassword("********"); // Mask password in response
 
-            logger.info("User registration/creation successful. User ID: {}", savedUser.getId());
+            // logger.info("User registration/creation successful. User ID: {}",
+            // savedUser.getId());
             return userdto;
         } catch (ServiceException ex) {
             throw ex;
         } catch (Exception ex) {
             // @transactional rollback happens on runtime exception our ServiceException is
             // runtimeexception so it will work
-            logger.error("Unexpected error during user creation", ex);
+            logger.error("Unexpected error during user creation", ex.getMessage());
             throw new ServiceException("User creation failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -162,7 +163,10 @@ public class UserServiceImpl implements UserService {
             @CacheEvict(value = "userListCache", key = "'allUsers'", beforeInvocation = true)
     })
     public UserDTO updateUser(String userId, UserDTO userDTO) {
-        logger.info("Updating user with ID: {}", userId);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Updating user with ID: {}", userId);
+        }
+        
         String validId = InputSecurityUtils.secureId(userId);
 
         Optional<User> optionalUser = userRepository.findById(validId);
@@ -190,7 +194,11 @@ public class UserServiceImpl implements UserService {
             updatePasswordIfRequested(user, userDTO);
             // save to db
             User updatedUser = userRepository.save(user);
-            logger.info("User updated successfully. ID: {}", updatedUser.getId());
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("User updated successfully. ID: {}", updatedUser.getId());
+            }
+
             UserDTO updatedUserDTO = Mapper.mapToUserDTO(updatedUser);
             updatedUserDTO.setPassword("********");
             return updatedUserDTO;
@@ -218,7 +226,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Update field
-        //saving epochmilli in db as well frontend parsethis correctly
+        // saving epochmilli in db as well frontend parsethis correctly
         user.setUserlastSeen(lastActive);
 
         // Save to DB
@@ -271,14 +279,18 @@ public class UserServiceImpl implements UserService {
     }
 
     private void handleInvitedFlow(User savedUser) {
-        logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
+        if (logger.isDebugEnabled()) {
+            logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
+        }
+
         List<Contact> contacts = contactRepository.findByEmailAndContactUserIdIsNull(savedUser.getEmail());
         if (!contacts.isEmpty()) {
             int updatedCount = contactRepository.updateContactUserIdByEmail(
                     savedUser.getId(),
                     ContactStatus.ADDED,
                     savedUser.getEmail());
-            logger.info("Updated contactUserId for {} contacts matching email {}", updatedCount, savedUser.getEmail());
+            // logger.info("Updated contactUserId for {} contacts matching email {}",
+            // updatedCount, savedUser.getEmail());
         }
     }
 

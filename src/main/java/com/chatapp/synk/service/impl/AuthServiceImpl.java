@@ -67,6 +67,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserDTO forgotPassword(AuthDTO authDTO) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Forogt Password request received for phoenumber: {}",
+                    MaskIdentifierUtil.maskIdentifier(authDTO.getPhoneNumberOrEmail()));
+        }
+
         if (authDTO == null) {
             throw new ServiceException("Forgot password request data is required", HttpStatus.BAD_REQUEST);
         }
@@ -105,7 +110,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthDTO sanitizedDTO = InputValidationAndSanitizationService.validateAndSanitize(authDTO);
-        
+
         Authentication auth = authenticate(sanitizedDTO.getPhoneNumberOrEmail(), sanitizedDTO.getPassword());
         CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
 
@@ -138,21 +143,23 @@ public class AuthServiceImpl implements AuthService {
     private Authentication authenticate(String username, String password) throws ServiceException {
         try {
             if (logger.isDebugEnabled()) {
-                logger.debug("Attempting authentication for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+                logger.debug("Attempting authentication for user: {}", MaskIdentifierUtil.maskIdentifier(username));
             }
 
             Authentication auth = authenticationManager
                     .authenticate(new PhoneNumberAuthenticationToken(username, password));
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Authentication successful for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+                logger.debug("Authentication successful for user: {}", MaskIdentifierUtil.maskIdentifier(username));
             }
             return auth;
         } catch (DisabledException e) {
-            logger.warn("Authentication failed - account disabled for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+            logger.warn("Authentication failed - account disabled for user: {}",
+                    MaskIdentifierUtil.maskIdentifier(username));
             throw new ServiceException("USER_DISABLED", e);
         } catch (BadCredentialsException e) {
-            logger.warn("Authentication failed - invalid credentials for user: {}",  MaskIdentifierUtil.maskIdentifier(username));
+            logger.warn("Authentication failed - invalid credentials for user: {}",
+                    MaskIdentifierUtil.maskIdentifier(username));
             throw new ServiceException("INVALID_CREDENTIALS", e);
         }
     }
@@ -160,6 +167,10 @@ public class AuthServiceImpl implements AuthService {
     // Generates a new access token from a valid refresh token.
     @Override
     public JwtResponse refreshToken(RefreshTokenRequest request) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Generating new access token via refresh token");
+        }
+
         if (request == null || StringUtil.isBlank(request.getRefreshToken())) {
             throw new ServiceException("Refresh token is required", HttpStatus.BAD_REQUEST);
         }
@@ -183,7 +194,8 @@ public class AuthServiceImpl implements AuthService {
         claims.put("id", user.getId());
 
         String newToken = jwtUtil.generateAccessToken(claims, user.getPhoneNumber());
-        logger.info("New JWT token generated via refresh for user ID: {}", user.getId());
+        // logger.info("New JWT token generated via refresh for user ID: {}",
+        // user.getId());
 
         return new JwtResponse(newToken, refreshToken, user.getEmail(), user.getName(),
                 role, user.getEmail(), user.getProfilePictureUrl(), user.getId());
