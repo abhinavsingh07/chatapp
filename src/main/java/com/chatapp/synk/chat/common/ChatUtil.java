@@ -13,7 +13,7 @@ public final class ChatUtil {
     /**
      * Direct exchange for chat messages
      */
-    public static final String EXCHANGE_NAME = "chat.direct.exchange";
+    public static final String DIRECT_EXCHANGE_NAME = "chat.direct.exchange";
 
     /**
      * Redis user key prefix: user:{userId}

@@ -49,12 +49,13 @@ public class ChatMessagePublisher {
             String json = Json.mapper().writeValueAsString(env);
             String routingKey = ChatUtil.buildBindingKey(serverId);
 
+            logger.info("ChatMessagePublisher publishing on exhange::{} with routing key::{}",ChatUtil.DIRECT_EXCHANGE_NAME,routingKey);
             // Publish to RabbitMQ exchange with routing key based on target serverId
-            rabbitTemplate.convertAndSend(ChatUtil.EXCHANGE_NAME, routingKey, json);
+            rabbitTemplate.convertAndSend(ChatUtil.DIRECT_EXCHANGE_NAME, routingKey, json);
 
             logInfoIfChat(chatMessage,
                     "[SUCCESS] Published message | exchange={} | routingKey={} | toUserId={} | sessionId={}",
-                    ChatUtil.EXCHANGE_NAME, routingKey, toUserId, targetSessionId);
+                    ChatUtil.DIRECT_EXCHANGE_NAME, routingKey, toUserId, targetSessionId);
 
         } catch (Exception e) {
             logger.error("[ERROR] Failed to publish message | toUserId={} | sessionId={} | reason={}",

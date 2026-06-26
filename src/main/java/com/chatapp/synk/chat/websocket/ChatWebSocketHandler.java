@@ -6,9 +6,6 @@ import com.chatapp.synk.chat.rabbitmq.ChatMessagePublisher;
 import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.enums.ChatWebSocketStatus;
 import com.chatapp.synk.service.UserService;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -21,50 +18,25 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
+
     private final LocalWsSessionRegistry localWsSessionRegistry;
     private final RedisSessionStore redisSessionStore;
     private final ChatMessagePublisher chatMessagePublisher;
     private final ExecutorService taskExecutor;
     private final UserService userService;
 
-    // Metrics
-    private final AtomicInteger activeConnections = new AtomicInteger(0);
-    private final Counter messagesSent;
-    private final Counter messagesReceived;
-
-    public ChatWebSocketHandler(LocalWsSessionRegistry localWsSessionRegistry,
-                                RedisSessionStore redisSessionStore,
-                                ChatMessagePublisher chatMessagePublisher,
-                                ExecutorService taskExecutor,
-                                UserService userService,
-                                MeterRegistry meterRegistry) {
+    public ChatWebSocketHandler(LocalWsSessionRegistry localWsSessionRegistry, RedisSessionStore redisSessionStore,
+            ChatMessagePublisher chatMessagePublisher, ExecutorService taskExecutor, UserService userService) {
         this.localWsSessionRegistry = localWsSessionRegistry;
         this.redisSessionStore = redisSessionStore;
         this.chatMessagePublisher = chatMessagePublisher;
         this.taskExecutor = taskExecutor;
         this.userService = userService;
-
-        // Register WebSocket metrics
-        // Gauge for active connections
-        Gauge.builder("websocket.connections.active", activeConnections, AtomicInteger::get)
-                .description("Number of active WebSocket connections")
-                .register(meterRegistry);
-
-        // Counter for total messages sent
-        messagesSent = Counter.builder("websocket.messages.sent")
-                .description("Total number of WebSocket messages sent")
-                .register(meterRegistry);
-
-        // Counter for total messages received
-        messagesReceived = Counter.builder("websocket.messages.received")
-                .description("Total number of WebSocket messages received")
-                .register(meterRegistry);
     }
 
     @Override
@@ -90,12 +62,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             try {
                 wsSession.close(CloseStatus.POLICY_VIOLATION.withReason("Duplicate session"));
             } catch (IOException e) {
-                logger.error("[WS_CLOSE_FAILED] | userId={} sessionId={} error={}", userId, sessionId, e.getMessage(), e);
+                logger.error("[WS_CLOSE_FAILED] | userId={} sessionId={} error={}", userId, sessionId, e.getMessage(),
+                        e);
             }
             return;
         }
 
-        //storing userid and user session in local registry and redis for other server to know where to send message for this user.
+        // storing userid and user session in local registry and redis for other server
+        // to know where to send message for this user.
         localWsSessionRegistry.add(sessionId, userId, wsSession);
         redisSessionStore.saveUserSession(userId, serverId, sessionId);
 
@@ -103,13 +77,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         wsSession.sendMessage(new TextMessage(String.format(
                 "{\"type\":\"connected\",\"userId\":\"%s\",\"serverId\":\"%s\"}", userId, serverId)));
-        // Increment active connections metric
-        activeConnections.incrementAndGet();
     }
 
     @Override
     public void handleTextMessage(WebSocketSession wsSession, TextMessage message) throws Exception {
-        String userId = (String) wsSession.getAttributes().get("userId");//setting in WebSocketAuthHandshakeInterceptor
+        String userId = (String) wsSession.getAttributes().get("userId");// setting in WebSocketAuthHandshakeInterceptor
         String sessionId = wsSession.getId();
         String payload = message.getPayload();
 
@@ -124,20 +96,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         logger.debug("[WS_HEARTBEAT] | userId={} sessionId={}", userId, sessionId);
                         return;
                     } else if (ChatWebSocketStatus.CHAT.equals(chatMessage.getWsStatus())) {
-                        // Increment messages received metric
-                        // Increment received counter
-                        //Key takeaway
-                        //messagesReceived → increment every time a client sends a message.
-                        //messagesSent → increment only when your server actually sends a message to a client.
 
-                        messagesReceived.increment();
-                        chatMessage.setSentAt(Instant.now().toString());//other user will see this time when message arrive to them.
+                        chatMessage.setSentAt(Instant.now().toString());// other user will see this time when message arrive to them.
                         chatMessage.setFromUserId(userId);
                     }
 
                     chatMessagePublisher.sendToUser(chatMessage);
-                    // Increment messages sent metric
-                    messagesSent.increment();
 
                     logger.info("[WS_MESSAGE_PUBLISHED] | userId={} sessionId={} toUserId={}",
                             userId, sessionId, chatMessage.getToUserId());
@@ -146,7 +110,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     logger.error("[WS_MESSAGE_PROCESSING_FAILED] | userId={} sessionId={} payload={}",
                             userId, sessionId, payload, ex);
                     try {
-                        wsSession.sendMessage(new TextMessage("{\"error\":\"Invalid message format or server error\"}"));
+                        wsSession
+                                .sendMessage(new TextMessage("{\"error\":\"Invalid message format or server error\"}"));
                     } catch (IOException ioEx) {
                         logger.error("[WS_ERROR_RESPONSE_FAILED] | userId={} sessionId={}", userId, sessionId, ioEx);
                     }
@@ -171,7 +136,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         if (userId != null) {
             try {
-                //internally takes data from redis
+                // internally takes data from redis
                 userService.updateLastSeen(userId);
             } catch (Exception ex) {
                 logger.error("[WS_LAST_SEEN_UPDATE_FAILED] | userId={} sessionId={}", userId, sessionId, ex);
@@ -179,8 +144,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             localWsSessionRegistry.remove(userId);
             redisSessionStore.deleteUserSession(userId);
             logger.info("[WS_DISCONNECTED] | userId={} sessionId={} status={}", userId, sessionId, status);
-            // Decrement active connections metric
-            activeConnections.decrementAndGet();
         } else {
             logger.warn("[WS_DISCONNECTED_UNKNOWN] | sessionId={} status={}", sessionId, status);
         }

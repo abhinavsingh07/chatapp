@@ -33,7 +33,7 @@ public class RabbitMQConfig {
 
     @Bean
     public DirectExchange chatExchange() {
-        return new DirectExchange(ChatUtil.EXCHANGE_NAME, true, false);
+        return new DirectExchange(ChatUtil.DIRECT_EXCHANGE_NAME, true, false);
     }
 
     @Bean
@@ -43,6 +43,8 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding serverBinding(Queue serverQueue, DirectExchange chatExchange) {
+        //A binding key is attached when connecting a queue to an exchange.
+        //Send messages to this queue only when routing key = ChatUtil.buildBindingKey(serverId)
         return BindingBuilder.bind(serverQueue)
                 .to(chatExchange)
                 .with(ChatUtil.buildBindingKey(serverId));
