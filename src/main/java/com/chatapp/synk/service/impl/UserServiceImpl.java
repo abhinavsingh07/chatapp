@@ -27,6 +27,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -151,7 +152,6 @@ public class UserServiceImpl implements UserService {
         } catch (Exception ex) {
             // @transactional rollback happens on runtime exception our ServiceException is
             // runtimeexception so it will work
-            logger.error("Unexpected error during user creation", ex.getMessage());
             throw new ServiceException("User creation failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -166,7 +166,7 @@ public class UserServiceImpl implements UserService {
         if (logger.isDebugEnabled()) {
             logger.debug("Updating user with ID: {}", userId);
         }
-        
+
         String validId = InputSecurityUtils.secureId(userId);
 
         Optional<User> optionalUser = userRepository.findById(validId);
@@ -205,7 +205,6 @@ public class UserServiceImpl implements UserService {
         } catch (ServiceException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.error("Error while updating user with ID: {}", userId, ex);
             throw new ServiceException(ex.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
@@ -289,8 +288,8 @@ public class UserServiceImpl implements UserService {
                     savedUser.getId(),
                     ContactStatus.ADDED,
                     savedUser.getEmail());
-            // logger.info("Updated contactUserId for {} contacts matching email {}",
-            // updatedCount, savedUser.getEmail());
+            logger.info("Updated contactUserId for {} contacts matching email {}",
+                    updatedCount, savedUser.getEmail());
         }
     }
 

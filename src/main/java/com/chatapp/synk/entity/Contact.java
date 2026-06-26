@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "contact_user_id"}))
+@Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(name = "uq_user_contact",columnNames = {"user_id", "contact_user_id"}))
 public class Contact {
     public static final String ALIAS_CONTACT = "CONT";
     @Id

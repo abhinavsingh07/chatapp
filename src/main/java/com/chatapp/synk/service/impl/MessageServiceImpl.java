@@ -12,6 +12,7 @@ import com.chatapp.synk.util.Mapper;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -54,13 +55,35 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public MessageDTO saveMessage(MessageDTO messageDTO) {
         MessageDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(messageDTO);
+
+        // Idempotency fast-path: client retrying the same message returns the already-saved one
+        if (validDTO.getClientMessageId() != null) {
+            Message existing = messageRepository.findByClientMessageId(validDTO.getClientMessageId())
+                    .orElse(null);
+            if (existing != null) {
+                logger.info("Duplicate detected for clientMessageId [{}], returning existing [{}]",
+                        validDTO.getClientMessageId(), existing.getId());
+                return Mapper.mapToMessageDTO(existing);
+            }
+        }
+
         logger.info("Saving message from {} to {}", validDTO.getSenderId(), validDTO.getReceiverId());
-        Message message = Mapper.mapToMessageEntity(validDTO);
-        Message saved = messageRepository.save(message);
-        //upserting last message
-        conversationLastMessageService.upsertLastMessage(saved.getConversationId(), saved.getId(), saved.getSenderId(), saved.getContent());
-        logger.info("Message saved with ID: {}", saved.getId());
-        return Mapper.mapToMessageDTO(saved);
+        try {
+            Message message = Mapper.mapToMessageEntity(validDTO);
+            Message saved = messageRepository.save(message);
+            conversationLastMessageService.upsertLastMessage(
+                    saved.getConversationId(), saved.getId(), saved.getSenderId(), saved.getContent());
+            logger.info("Message saved with ID: {}", saved.getId());
+            return Mapper.mapToMessageDTO(saved);
+
+        } catch (DataIntegrityViolationException e) {
+            // Race: another thread inserted the same clientMessageId just now — return its result
+            logger.info("Race condition on clientMessageId [{}] — returning winner's message",
+                    validDTO.getClientMessageId());
+            return messageRepository.findByClientMessageId(validDTO.getClientMessageId())
+                    .map(Mapper::mapToMessageDTO)
+                    .orElseThrow(() -> new ServiceException("Could not save or retrieve message"));
+        }
     }
 
     @Override

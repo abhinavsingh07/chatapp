@@ -19,6 +19,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,52 +81,61 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     @Cacheable(value = "conversationIdLookupCache", key = "T(com.chatapp.synk.security.SecurityUtil).getCurrentUserIdFromSecurityContext() + '_' + #contactUserId", unless = "#result == null")
-    @Transactional // make all db calls as one automic transaction
+    @Transactional
     public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
 
-        // String loggedInUserValidId = InputSecurityUtils.secureId(loggedInUserId);
-        // Authorization check getting token from security context setted in jwt util
         String loggedInUserValidId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         String contactUserValidId = InputSecurityUtils.secureId(contactUserId);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserValidId, contactUserId);
+            logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserValidId, contactUserValidId);
         }
 
         if (loggedInUserValidId.equals(contactUserValidId)) {
             throw new ServiceException("Cannot create conversation with yourself");
         }
 
-        String conversationId = conversationRepository.findConversationIdByUserIdAndContactUserId(
-                loggedInUserValidId, contactUserValidId);
+        //This is concurrency control mechanism by introducing PrivateChatKey 
+        // column with unique index. This ensures that only one conversation 
+        // exists between two users, even if multiple threads attempt to create it simultaneously.
+        String key = buildPrivateChatKey(loggedInUserValidId, contactUserValidId);
 
-        if (conversationId != null) {
-            logger.info("Existing conversation [{}] reused between [{}] and [{}]",
-                    conversationId, loggedInUserValidId, contactUserValidId);
-            return conversationId;
+        // Fast path: single indexed column lookup — no joins
+        Optional<Conversation> existing = conversationRepository.findByPrivateChatKey(key);
+        if (existing.isPresent()) {
+            logger.info("Existing conversation [{}] reused for key [{}]", existing.get().getId(), key);
+            return existing.get().getId();
         }
 
-        String newConversationId = RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString();
-        Conversation conversation = new Conversation(newConversationId, ConversationType.ONE_TO_ONE.toString());
-        // db call
-        conversationRepository.save(conversation);
+        // Try to insert — DB unique constraint on private_chat_key guarantees only one winner
+        try {
+            String newConversationId = RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString();
+            conversationRepository.save(
+                    new Conversation(newConversationId, ConversationType.ONE_TO_ONE.toString(), key));
 
-        logger.info("New conversation [{}] created between [{}] and [{}]",
-                newConversationId, loggedInUserId, contactUserId);
+            participantRepository.saveAll(List.of(
+                    new ConversationParticipant(
+                            RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
+                            newConversationId, loggedInUserValidId),
+                    new ConversationParticipant(
+                            RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
+                            newConversationId, contactUserValidId)));
 
-        List<ConversationParticipant> participants = List.of(
-                new ConversationParticipant(
-                        RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
-                        newConversationId, loggedInUserId),
-                new ConversationParticipant(
-                        RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString(),
-                        newConversationId, contactUserId));
-        // db call
-        participantRepository.saveAll(participants);
+            logger.info("New conversation [{}] created for key [{}]", newConversationId, key);
+            return newConversationId;
 
-        logger.info("Participants [{}] and [{}] added to conversation [{}]",
-                loggedInUserId, contactUserId, newConversationId);
+        } catch (DataIntegrityViolationException e) {
+            // Another thread won the race and already inserted — read its result
+            logger.info("Race condition on key [{}] — reading winner's conversation", key);
+            return conversationRepository.findByPrivateChatKey(key)
+                    .map(Conversation::getId)
+                    .orElseThrow(() -> new ServiceException("Could not create or retrieve conversation"));
+        }
+    }
 
-        return newConversationId;
+    private static String buildPrivateChatKey(String userId1, String userId2) {
+        return userId1.compareTo(userId2) <= 0
+                ? userId1 + ":" + userId2
+                : userId2 + ":" + userId1;
     }
 }

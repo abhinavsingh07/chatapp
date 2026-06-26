@@ -10,11 +10,15 @@ import java.time.LocalDateTime;
 public class Conversation {
     public static final String ALIAS_CONVERSATION = "CONV";
     @Id
-    @Column(name = "id", nullable = false,length = 50)
+    @Column(name = "id", nullable = false, length = 50)
     private String id;
 
-    @Column(name = "conversation_type",length = 10)
+    @Column(name = "conversation_type", length = 10)
     private String conversationType = ConversationType.ONE_TO_ONE.toString();
+
+    // Canonical key: smallerUserId + ":" + largerUserId — unique per user-pair
+    @Column(name = "private_chat_key", length = 101, unique = true)
+    private String privateChatKey;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -24,9 +28,10 @@ public class Conversation {
         this.createdAt = LocalDateTime.now();
     }
 
-    public Conversation(String id, String conversationType) {
+    public Conversation(String id, String conversationType, String privateChatKey) {
         this.id = id;
         this.conversationType = conversationType;
+        this.privateChatKey = privateChatKey;
     }
 
     public Conversation() {
@@ -47,6 +52,14 @@ public class Conversation {
 
     public void setConversationType(String conversationType) {
         this.conversationType = conversationType;
+    }
+
+    public String getPrivateChatKey() {
+        return privateChatKey;
+    }
+
+    public void setPrivateChatKey(String privateChatKey) {
+        this.privateChatKey = privateChatKey;
     }
 
     public LocalDateTime getCreatedAt() {

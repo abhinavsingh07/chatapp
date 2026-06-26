@@ -37,6 +37,10 @@ public class Message {
     @Column(name = "sent_at", nullable = false, updatable = false)
     private Instant sentAt;//Instant is UTC time client converts this time on their browser or mobile sdk and get its time according to it timezone
 
+    @Column(name = "client_message_id", length = 100, unique = true)
+    private String clientMessageId;
+
+
     @PrePersist
     protected void onCreate() {
         sentAt = Instant.now(); // Always UTC
@@ -105,5 +109,13 @@ public class Message {
 
     public void setSentAt(Instant sentAt) {
         this.sentAt = sentAt;
+    }
+
+    public String getClientMessageId() {
+        return clientMessageId;
+    }
+
+    public void setClientMessageId(String clientMessageId) {
+        this.clientMessageId = clientMessageId;
     }
 }

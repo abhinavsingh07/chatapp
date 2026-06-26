@@ -16,6 +16,7 @@ public class MessageDTO {
     private String mediaId;
     private MessageStatus messageStatus;
     private String sentAt;
+    private String clientMessageId; // Unique identifier for idempotency
 
     public MessageDTO() {
 
@@ -85,4 +86,14 @@ public class MessageDTO {
     public void setSentAt(String sentAt) {
         this.sentAt = sentAt;
     }
+
+    public String getClientMessageId() {
+        return clientMessageId;
+    }
+
+    public void setClientMessageId(String clientMessageId) {
+        this.clientMessageId = clientMessageId;
+    }
+
+    
 }

@@ -56,7 +56,7 @@ public class ContactServiceImpl implements ContactService {
         String validId=SecurityUtil.getCurrentUserIdFromSecurityContext();
         // String validId = InputSecurityUtils.secureId(userId);
         if (validId != null && !validId.isEmpty()) {
-            return contactRepository.findContactUserDetailsByUserId(userId.trim());
+            return contactRepository.findContactUserDetailsByUserId(validId.trim());
         } else {
             return contactRepository.findAllContactsWithUserDetails();
         }

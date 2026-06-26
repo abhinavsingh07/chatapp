@@ -6,7 +6,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users", schema = "chatapp")
+@Table(name = "users", schema = "chatapp",
+        uniqueConstraints = @UniqueConstraint(name = "uq_phone_email", columnNames = {"phone_number", "email"}))
 public class User {
     public static final String ALIAS_USER = "USER";
     @Id
@@ -16,7 +17,7 @@ public class User {
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
 
-    @Column(name = "email", length = 100, unique = true)
+    @Column(name = "email", length = 100)
     private String email;
 
     @Column(name = "password", length = 200)
