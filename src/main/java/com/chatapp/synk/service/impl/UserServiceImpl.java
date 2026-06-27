@@ -215,7 +215,8 @@ public class UserServiceImpl implements UserService {
         String validId = InputSecurityUtils.secureId(userId);
 
         // Fetch user from DB first
-        User user = userRepository.findById(Long.parseLong(validId))
+        User user = userRepository
+                .findById(Long.parseLong(validId))
                 .orElseThrow(() -> new ServiceException("User not found with ID", HttpStatus.NOT_FOUND));
 
         // Find lastactive time from redis

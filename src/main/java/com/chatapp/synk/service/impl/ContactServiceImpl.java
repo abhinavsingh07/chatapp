@@ -59,7 +59,7 @@ public class ContactServiceImpl implements ContactService {
             return contactRepository.findContactUserDetailsByUserId(Long.parseLong(validId.trim()));
         } else {
             return contactRepository.findAllContactsWithUserDetails();
-        }
+        } 
     }
 
     @Override
@@ -74,8 +74,8 @@ public class ContactServiceImpl implements ContactService {
         }
 
         Contact contact = contactOpt.get();
-        String userId = contact.getUserId();
-        String contactUserId = contact.getContactUserId();
+        Long userId = contact.getUserId();
+        // Long contactUserId = contact.getContactUserId();
 
         // delete from DB
         contactRepository.delete(contact);
@@ -88,14 +88,14 @@ public class ContactServiceImpl implements ContactService {
         }
 
         // Evict mutual contact caches for both directions
-        Cache mutualCache = cacheManager.getCache("mutualContacts");
-        if (mutualCache != null) {
-            String keyAB = userId + "_" + contactUserId;
-            String keyBA = contactUserId + "_" + userId;
-            mutualCache.evict(keyAB);
-            mutualCache.evict(keyBA);
-            logger.debug("Evicted mutual contact cache entries: [{}] and [{}]", keyAB, keyBA);
-        }
+        // Cache mutualCache = cacheManager.getCache("mutualContacts");
+        // if (mutualCache != null) {
+        //     String keyAB = userId + "_" + contactUserId;
+        //     String keyBA = contactUserId + "_" + userId;
+        //     mutualCache.evict(keyAB);
+        //     mutualCache.evict(keyBA);
+        //     logger.debug("Evicted mutual contact cache entries: [{}] and [{}]", keyAB, keyBA);
+        // }
 
         logger.info("Contact deleted successfully: {}", contactId);
     }

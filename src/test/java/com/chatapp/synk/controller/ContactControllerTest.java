@@ -43,7 +43,7 @@ class ContactControllerTest {
         mockContactDTO.setEmail("user2@example.com");
 
         mockContactUserDTO = new ContactUserDTO();
-        mockContactUserDTO.setContactId("1");
+        mockContactUserDTO.setContactId(1L);
         mockContactUserDTO.setName("Alice Johnson");
         mockContactUserDTO.setEmail("alice@example.com");
     }

@@ -25,7 +25,7 @@ public class RefreshToken {
     private String identifierId;
 
     @Column(name = "user_id", nullable = false, length = 50)
-    private String userId;
+    private Long userId;
 
     @Column(name = "token_hash", nullable = false, unique = true, length = 255)
     private String tokenHash;
@@ -36,8 +36,8 @@ public class RefreshToken {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "revoked" )
-    private char  revoked;
+    @Column(name = "revoked")
+    private char revoked;
 
     @Column(name = "revoked_at")
     private Instant revokedAt;
@@ -80,16 +80,20 @@ public class RefreshToken {
         this.identifierId = identifierId;
     }
 
-    public String getUserId() {
+    public String getTokenHash() {
+        return tokenHash;
+    }
+
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
-    public String getTokenHash() {
-        return tokenHash;
+    public char getRevoked() {
+        return revoked;
     }
 
     public void setTokenHash(String tokenHash) {
@@ -116,7 +120,7 @@ public class RefreshToken {
         return revoked;
     }
 
-    public void setRevoked(char  revoked) {
+    public void setRevoked(char revoked) {
         this.revoked = revoked;
     }
 

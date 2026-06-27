@@ -8,7 +8,8 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(name = "uq_user_contact",columnNames = {"user_id", "contact_user_id"}))
+@Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(name = "uq_user_contact", columnNames = {
+        "user_id", "contact_user_id" }))
 public class Contact {
     public static final String ALIAS_CONTACT = "CONT";
     @Id
@@ -21,10 +22,10 @@ public class Contact {
     private String identifierId;
 
     @Column(name = "user_id", nullable = false, length = 50)
-    private String userId;
+    private Long userId;
 
     @Column(name = "contact_user_id", length = 100)
-    private String contactUserId;
+    private Long contactUserId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -62,19 +63,19 @@ public class Contact {
         this.identifierId = identifierId;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
-    public String getContactUserId() {
+    public Long getContactUserId() {
         return contactUserId;
     }
 
-    public void setContactUserId(String contactUserId) {
+    public void setContactUserId(Long contactUserId) {
         this.contactUserId = contactUserId;
     }
 

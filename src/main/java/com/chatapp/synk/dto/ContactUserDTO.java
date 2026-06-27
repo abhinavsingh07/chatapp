@@ -5,45 +5,59 @@ import com.chatapp.synk.enums.EmailStatus;
 import com.chatapp.synk.enums.UserStatus;
 
 public class ContactUserDTO {
-    private String contactId;
-    private String userId;
+    private Long contactId;
+    private Long userId;
     private ContactStatus contactStatus;
     private EmailStatus emailStatus;
-    private String contactUserId;
+    private Long contactUserId;
     private String contactEmail;
+    private String identifierId;
 
-    //user table fields
+    // user table fields
     private String name;
     private String phoneNumber;
     private String email;
     private String profilePictureUrl;
     private UserStatus status;
 
+    // using JPQL query and normal object mapping in repository layer to set these
+    // fields
+    public ContactUserDTO(Long contactId,
+            ContactStatus contactStatus,
+            EmailStatus emailStatus,
+            Long contactUserId,
+            String contactEmail,
+            Long userId,
+            String identifierId,
+            String name,
+            String phoneNumber,
+            String email,
+            String profilePictureUrl,
+            UserStatus status) {
 
-
-    //using JPQL query and normal object mapping in repository layer to set these fields
-    public ContactUserDTO(String contactId, ContactStatus contactStatus, EmailStatus emailStatus, String contactUserId,String contactEmail, String name, String phoneNumber, String email, String profilePictureUrl, UserStatus status,String userId) {
         this.contactId = contactId;
         this.contactStatus = contactStatus;
         this.emailStatus = emailStatus;
         this.contactUserId = contactUserId;
-        this.contactEmail=contactEmail;
+        this.contactEmail = contactEmail;
+        this.userId = userId;
+        this.identifierId = identifierId;
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.profilePictureUrl = profilePictureUrl;
         this.status = status;
-        this.userId=userId;
+
     }
 
     public ContactUserDTO() {
     }
 
-    public String getContactId() {
+    public Long getContactId() {
         return contactId;
     }
 
-    public void setContactId(String contactId) {
+    public void setContactId(Long contactId) {
         this.contactId = contactId;
     }
 
@@ -63,11 +77,11 @@ public class ContactUserDTO {
         this.emailStatus = emailStatus;
     }
 
-    public String getContactUserId() {
+    public Long getContactUserId() {
         return contactUserId;
     }
 
-    public void setContactUserId(String contactUserId) {
+    public void setContactUserId(Long contactUserId) {
         this.contactUserId = contactUserId;
     }
 
@@ -119,12 +133,20 @@ public class ContactUserDTO {
         this.contactEmail = contactEmail;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
 }

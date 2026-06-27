@@ -40,28 +40,38 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
     List<ContactUserDTO> findContactUserDetailsByUserId(@Param("userId") Long userId);
 
     @Query("""
-         SELECT new com.chatapp.synk.dto.ContactUserDTO(
-            c.id,
-            c.contactStatus,
-            c.emailStatus,
-            c.contactUserId,
-            c.email,
-            u.name,
-            u.phoneNumber,
-            u.email,
-            u.profilePictureUrl,
-            u.status,c.userId) 
-            FROM Contact
-            c JOIN
-            User u
-            ON c.contactUserId=u.id
-        """)
-
+             SELECT new com.chatapp.synk.dto.ContactUserDTO(
+                c.id,
+                c.contactStatus,
+                c.emailStatus,
+                c.contactUserId,
+                c.email,
+                c.userId,
+                c.identifierId,
+                u.name,
+                u.phoneNumber,
+                u.email,
+                u.profilePictureUrl,
+                u.status,
+                )
+                FROM Contact
+                c JOIN
+                User u
+                ON c.contactUserId=u.id
+            """)
     List<ContactUserDTO> findAllContactsWithUserDetails();
 
     @Modifying
-    @Query("UPDATE Contact c SET c.contactUserId = :userId,c.contactStatus=:contactStatus WHERE c.email = :email AND c.contactUserId IS NULL")
-    int updateContactUserIdByEmail(@Param("userId") Long userId, @Param("contactStatus") ContactStatus contactStatus,
+    @Query("""
+            UPDATE Contact c
+            SET c.contactUserId = :userId,
+                c.contactStatus = :contactStatus
+            WHERE c.email = :email
+              AND c.contactUserId IS NULL
+            """)
+    int updateContactUserIdByEmail(
+            @Param("userId") Long userId,
+            @Param("contactStatus") ContactStatus contactStatus,
             @Param("email") String email);
 
     boolean existsByUserIdAndContactUserIdAndContactStatus(Long userId, Long contactUserId,

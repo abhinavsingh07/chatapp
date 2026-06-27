@@ -40,8 +40,8 @@ public class Mapper {
         String generatedId = RandomUUIDGenerater.getId(Contact.ALIAS_CONTACT).toString();
         Contact contact = new Contact();
         contact.setIdentifierId(generatedId);
-        contact.setUserId(dto.getUserId());
-        contact.setContactUserId(dto.getContactUserId());
+        contact.setUserId(Long.parseLong(dto.getUserId()));
+        contact.setContactUserId(Long.parseLong(dto.getContactUserId()));
         contact.setContactStatus(dto.getContactStatus());
         contact.setEmailStatus(dto.getEmailStatus());
         contact.setEmail(dto.getEmail());
@@ -52,8 +52,8 @@ public class Mapper {
         ContactDTO dto = new ContactDTO();
         dto.setId(String.valueOf(contact.getId()));
         dto.setIdentifierId(contact.getIdentifierId());
-        dto.setUserId(contact.getUserId());
-        dto.setContactUserId(contact.getContactUserId());
+        dto.setUserId(String.valueOf(contact.getUserId()));
+        dto.setContactUserId(String.valueOf(contact.getContactUserId()));
         dto.setContactStatus(contact.getContactStatus());
         dto.setEmailStatus(contact.getEmailStatus());
         dto.setEmail(contact.getEmail());
@@ -120,9 +120,10 @@ public class Mapper {
 
     public static RefreshToken mapToRefreshTokenEntity(RefreshTokenDto dto) {
         RefreshToken refreshToken = new RefreshToken();
-        String identifierId = dto.getIdentifierId() != null ? dto.getIdentifierId() : RandomUUIDGenerater.getId(RefreshToken.ALIAS_REFRESH_TOKEN).toString();
+        String identifierId = dto.getIdentifierId() != null ? dto.getIdentifierId()
+                : RandomUUIDGenerater.getId(RefreshToken.ALIAS_REFRESH_TOKEN).toString();
         refreshToken.setIdentifierId(identifierId);
-        refreshToken.setUserId(dto.getUserId());
+        refreshToken.setUserId(Long.parseLong(dto.getUserId()));
         refreshToken.setTokenHash(dto.getTokenHash());
         refreshToken.setIssuedAt(dto.getIssuedAt());
         refreshToken.setExpiresAt(dto.getExpiresAt());
@@ -139,7 +140,7 @@ public class Mapper {
         RefreshTokenDto dto = new RefreshTokenDto();
         dto.setId(String.valueOf(refreshToken.getId()));
         dto.setIdentifierId(refreshToken.getIdentifierId());
-        dto.setUserId(refreshToken.getUserId());
+        dto.setUserId(String.valueOf(refreshToken.getUserId()));
         dto.setTokenHash(refreshToken.getTokenHash());
         dto.setIssuedAt(refreshToken.getIssuedAt());
         dto.setExpiresAt(refreshToken.getExpiresAt());
@@ -150,5 +151,5 @@ public class Mapper {
         dto.setUserAgent(refreshToken.getUserAgent());
         dto.setIpAddress(refreshToken.getIpAddress());
         return dto;
-    }}
-
+    }
+}
