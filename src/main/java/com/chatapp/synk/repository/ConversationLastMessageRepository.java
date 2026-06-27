@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Repository
-public interface ConversationLastMessageRepository extends JpaRepository<ConversationLastMessage, String> {
+public interface ConversationLastMessageRepository extends JpaRepository<ConversationLastMessage, Long> {
     @Modifying   // tells Spring this query changes data
     @Transactional // ensures atomic commit/rollback
     @Query(value = "INSERT INTO conversation_last_message " + "(conversation_id, message_id, sender_id, content, sent_at,updated_at) " +
@@ -24,9 +24,9 @@ public interface ConversationLastMessageRepository extends JpaRepository<Convers
             "content = VALUES(content)," +
             "sent_at = VALUES(sent_at)," +
             "updated_at = VALUES(updated_at)", nativeQuery = true)
-    void upsertLastMessage(@Param("conversationId") String conversationId,
-                           @Param("messageId") String messageId,
-                           @Param("senderId") String senderId,
+    void upsertLastMessage(@Param("conversationId") Long conversationId,
+                           @Param("messageId") Long messageId,
+                           @Param("senderId") Long senderId,
                            @Param("content") String content,
                            @Param("sentAt") Instant sentAt,
                            @Param("updatedAt") Instant updatedAt);
@@ -53,6 +53,6 @@ public interface ConversationLastMessageRepository extends JpaRepository<Convers
             WHERE cp_self.user_id = :loggedInUserId
               AND cp_other.user_id != :loggedInUserId
             """, nativeQuery = true)
-    List<ConversationLastMsgDTO> findUserConversations(@Param("loggedInUserId") String loggedInUserId);
+    List<ConversationLastMsgDTO> findUserConversations(@Param("loggedInUserId") Long loggedInUserId);
 
 }

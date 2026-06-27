@@ -2,9 +2,11 @@ package com.chatapp.synk.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 
@@ -14,8 +16,13 @@ public class RefreshToken {
     public static final String ALIAS_REFRESH_TOKEN = "RFTK";
 
     @Id
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
+
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
 
     @Column(name = "user_id", nullable = false, length = 50)
     private String userId;
@@ -57,12 +64,20 @@ public class RefreshToken {
         }
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getUserId() {

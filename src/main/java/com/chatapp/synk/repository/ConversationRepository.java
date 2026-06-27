@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ConversationRepository extends JpaRepository<Conversation, String> {
+public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
     Optional<Conversation> findByPrivateChatKey(String privateChatKey);
 

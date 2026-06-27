@@ -12,16 +12,16 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ContactRepository extends JpaRepository<Contact, String> {
-    List<Contact> findByUserIdAndContactUserId(String userId, String contactUserId);
+public interface ContactRepository extends JpaRepository<Contact, Long> {
+    List<Contact> findByUserIdAndContactUserId(Long userId, Long contactUserId);
 
-    List<Contact> findAllByUserId(String userId);
+    List<Contact> findAllByUserId(Long userId);
 
     List<Contact> findByEmailAndContactUserIdIsNull(String email);
 
     @Query("""
             SELECT new com.chatapp.synk.dto.ContactUserDTO(
-                c.id,
+                c.identifierId,
                 c.contactStatus,
                 c.emailStatus,
                 c.contactUserId,
@@ -37,7 +37,7 @@ public interface ContactRepository extends JpaRepository<Contact, String> {
             LEFT JOIN User u ON c.contactUserId = u.id
             WHERE c.userId = :userId
             """)
-    List<ContactUserDTO> findContactUserDetailsByUserId(@Param("userId") String userId);
+    List<ContactUserDTO> findContactUserDetailsByUserId(@Param("userId") Long userId);
 
     @Query("""
          SELECT new com.chatapp.synk.dto.ContactUserDTO(
@@ -61,9 +61,9 @@ public interface ContactRepository extends JpaRepository<Contact, String> {
 
     @Modifying
     @Query("UPDATE Contact c SET c.contactUserId = :userId,c.contactStatus=:contactStatus WHERE c.email = :email AND c.contactUserId IS NULL")
-    int updateContactUserIdByEmail(@Param("userId") String userId, @Param("contactStatus") ContactStatus contactStatus,
+    int updateContactUserIdByEmail(@Param("userId") Long userId, @Param("contactStatus") ContactStatus contactStatus,
             @Param("email") String email);
 
-    boolean existsByUserIdAndContactUserIdAndContactStatus(String userId, String contactUserId,
+    boolean existsByUserIdAndContactUserIdAndContactStatus(Long userId, Long contactUserId,
             ContactStatus contactStatus);
 }

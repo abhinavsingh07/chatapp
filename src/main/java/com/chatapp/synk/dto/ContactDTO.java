@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 public class  ContactDTO {
 
     private String id;
+    private String identifierId;
     @NotBlank(message = "User Id is required")
     private String userId;
     @NotBlank(message = "Email is required")
@@ -32,6 +33,14 @@ public class  ContactDTO {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getUserId() {

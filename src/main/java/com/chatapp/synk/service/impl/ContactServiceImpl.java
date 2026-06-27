@@ -53,10 +53,10 @@ public class ContactServiceImpl implements ContactService {
     @Override
     @Cacheable(value = "contactListCache", key = "#userId != null && !#userId.isEmpty() ? #userId : 'ALL_CONTACTS'", unless = "#result == null || #result.isEmpty()")
     public List<ContactUserDTO> getContacts(String userId) {
-        String validId=SecurityUtil.getCurrentUserIdFromSecurityContext();
+        String validId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         // String validId = InputSecurityUtils.secureId(userId);
         if (validId != null && !validId.isEmpty()) {
-            return contactRepository.findContactUserDetailsByUserId(validId.trim());
+            return contactRepository.findContactUserDetailsByUserId(Long.parseLong(validId.trim()));
         } else {
             return contactRepository.findAllContactsWithUserDetails();
         }
@@ -66,7 +66,7 @@ public class ContactServiceImpl implements ContactService {
     @Caching(evict = { @CacheEvict(value = "contactCache", key = "#contactId", beforeInvocation = true) })
     public void deleteContact(String contactId) {
         String validId = InputSecurityUtils.secureId(contactId);
-        Optional<Contact> contactOpt = contactRepository.findById(validId);
+        Optional<Contact> contactOpt = contactRepository.findById(Long.parseLong(validId));
 
         if (contactOpt.isEmpty()) {
             logger.warn("Delete failed - no contact found with ID: {}", contactId);
@@ -100,16 +100,15 @@ public class ContactServiceImpl implements ContactService {
         logger.info("Contact deleted successfully: {}", contactId);
     }
 
-
     @Override
-    @Caching(
-    evict = {@CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
-             @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) },
-    put =   {@CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
+    @Caching(evict = {
+            @CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
+            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) }, put = {
+                    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
     public ContactDTO addContact(ContactDTO dto) {
         ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
-        String userId = validDTO.getUserId();//userid is of who is adding contact
-        String email = validDTO.getEmail();//email is of user to add
+        String userId = validDTO.getUserId();// userid is of who is adding contact
+        String email = validDTO.getEmail();// email is of user to add
 
         logger.info("Processing addContact request for userId={} with email={}", userId, email);
 
@@ -162,6 +161,7 @@ public class ContactServiceImpl implements ContactService {
         contactDTO.setEmail(email);
         ContactDTO savedContact = saveContact(contactDTO);
 
+        //spawning new thread to send email asynchronously to avoid blocking the main thread
         CompletableFuture.runAsync(() -> {
             boolean sent = emailService.sendEmail(new EmailDTO(email, "You're invited to join ChatApp!",
                     "Hi there!\n\nYou've been invited to join ChatApp. "
@@ -173,7 +173,8 @@ public class ContactServiceImpl implements ContactService {
     }
 
     private boolean contactExists(String userId, String contactUserId) {
-        return !contactRepository.findByUserIdAndContactUserId(userId, contactUserId).isEmpty();
+        return !contactRepository.findByUserIdAndContactUserId(Long.parseLong(userId), Long.parseLong(contactUserId))
+                .isEmpty();
     }
 
     private boolean contactExistsByEmail(String email) {
@@ -182,17 +183,21 @@ public class ContactServiceImpl implements ContactService {
     }
 
     private void updateEmailStatus(String contactId, EmailStatus status) {
-        contactRepository.findById(contactId).ifPresent(contact -> {
-            contact.setEmailStatus(status);
-            contactRepository.save(contact);
-        });
+        contactRepository.findById(Long.parseLong(contactId))
+                .ifPresent(contact -> {
+                    contact.setEmailStatus(status);
+                    contactRepository.save(contact);
+                });
     }
 
     private ContactDTO saveContact(ContactDTO contactDTO) {
         try {
             Contact contactEntity = Mapper.mapToContactEntity(contactDTO);
+            // db call to save contact
             Contact saved = contactRepository.save(contactEntity);
-            logger.info("Contact saved successfully for userId={}", contactDTO.getUserId());
+            if (logger.isDebugEnabled()) {
+                logger.info("Contact saved successfully for userId={}", contactDTO.getUserId());
+            }
             return Mapper.mapToContactDTO(saved);
 
         } catch (Exception ex) {

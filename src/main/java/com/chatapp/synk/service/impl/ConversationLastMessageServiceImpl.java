@@ -31,18 +31,25 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
         Instant sentAt = Instant.now();
         Instant updatedAt = Instant.now();
         logger.info("Upserting last message for conversationId={}, messageId={}", conversationValidId, messageValidId);
-        conversationLastMessageRepository.upsertLastMessage(conversationValidId, messageValidId, senderValidId,
+        conversationLastMessageRepository.upsertLastMessage(Long.parseLong(conversationValidId),
+                Long.parseLong(messageValidId), Long.parseLong(senderValidId),
                 safeContent, sentAt, updatedAt);
-        logger.info("Successfully upserted last message for conversationId={}", conversationValidId);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Successfully upserted last message for conversationId={}", conversationValidId);
+        }
     }
 
     @Override
     public List<ConversationLastMsgDTO> findUserConversations(String loggedInUserId) {
+        logger.info("Fetching chat list for loggedInUserId={}", loggedInUserId);
         String validUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         // String validUserId = InputSecurityUtils.secureId(loggedInUserId);
         logger.info("Fetching chat list for userId={}", validUserId);
-        List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository.findUserConversations(validUserId);
-        logger.info("Fetched {} conversations for userId={}", chatList.size(), validUserId);
+        List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository
+                .findUserConversations(Long.parseLong(validUserId));
+        if(logger.isDebugEnabled()) {
+            logger.debug("Fetched {} conversations for userId={}", chatList.size(), validUserId);
+        }
         return chatList;
     }
 }

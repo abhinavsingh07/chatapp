@@ -27,7 +27,8 @@ public class MessageServiceImpl implements MessageService {
 
     private final ConversationLastMessageService conversationLastMessageService;
 
-    public MessageServiceImpl(MessageRepository messageRepository, ConversationLastMessageService conversationLastMessageService) {
+    public MessageServiceImpl(MessageRepository messageRepository,
+            ConversationLastMessageService conversationLastMessageService) {
         this.messageRepository = messageRepository;
         this.conversationLastMessageService = conversationLastMessageService;
     }
@@ -35,20 +36,21 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public List<MessageDTO> getMessagesByConversationId(String conversationId) {
         String validId = InputSecurityUtils.secureId(conversationId);
-        return messageRepository.findByConversationIdOrderBySentAtAsc(validId)
-        .stream()
-        .map(Mapper::mapToMessageDTO)
-        .collect(Collectors.toList());
+        return messageRepository.findByConversationIdOrderBySentAtAsc(Long.parseLong(validId))
+                .stream()
+                .map(Mapper::mapToMessageDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<MessageDTO> getUnreadMessagesForReceiver(String conversationId, String receiverId) {
         String receiverValidId = InputSecurityUtils.secureId(receiverId);
         String conversationValidId = InputSecurityUtils.secureId(conversationId);
-        return messageRepository.findByConversationIdAndReceiverId(conversationValidId, receiverValidId)
-        .stream()
-        .map(Mapper::mapToMessageDTO)
-        .collect(Collectors.toList());
+        return messageRepository
+                .findByConversationIdAndReceiverId(Long.parseLong(conversationValidId), Long.parseLong(receiverValidId))
+                .stream()
+                .map(Mapper::mapToMessageDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -56,12 +58,13 @@ public class MessageServiceImpl implements MessageService {
     public MessageDTO saveMessage(MessageDTO messageDTO) {
         MessageDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(messageDTO);
 
-        // Idempotency fast-path: client retrying the same message returns the already-saved one
+        // Idempotency fast-path: client retrying the same message returns the
+        // already-saved one
         if (validDTO.getClientMessageId() != null) {
             Message existing = messageRepository.findByClientMessageId(validDTO.getClientMessageId())
                     .orElse(null);
             if (existing != null) {
-                logger.info("Duplicate detected for clientMessageId [{}], returning existing [{}]",
+                logger.warn("Duplicate detected for clientMessageId [{}], returning existing [{}]",
                         validDTO.getClientMessageId(), existing.getId());
                 return Mapper.mapToMessageDTO(existing);
             }
@@ -70,15 +73,24 @@ public class MessageServiceImpl implements MessageService {
         logger.info("Saving message from {} to {}", validDTO.getSenderId(), validDTO.getReceiverId());
         try {
             Message message = Mapper.mapToMessageEntity(validDTO);
-            Message saved = messageRepository.save(message);
+            Message savedMessage = messageRepository.save(message);
+            // upsert last message for the conversation
             conversationLastMessageService.upsertLastMessage(
-                    saved.getConversationId(), saved.getId(), saved.getSenderId(), saved.getContent());
-            logger.info("Message saved with ID: {}", saved.getId());
-            return Mapper.mapToMessageDTO(saved);
+                    String.valueOf(savedMessage.getConversationId()),
+                    String.valueOf(savedMessage.getId()),
+                    String.valueOf(savedMessage.getSenderId()),
+                    savedMessage.getContent());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Last message upserted for conversationId: {}", savedMessage.getConversationId());
+                logger.debug("Message saved with ID: {}", savedMessage.getId());
+            }
+
+            return Mapper.mapToMessageDTO(savedMessage);
 
         } catch (DataIntegrityViolationException e) {
-            // Race: another thread inserted the same clientMessageId just now — return its result
-            logger.info("Race condition on clientMessageId [{}] — returning winner's message",
+            // Race: another thread inserted the same clientMessageId just now — return its
+            // result
+            logger.warn("Race condition on clientMessageId [{}] — returning winner's message",
                     validDTO.getClientMessageId());
             return messageRepository.findByClientMessageId(validDTO.getClientMessageId())
                     .map(Mapper::mapToMessageDTO)
@@ -90,13 +102,12 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public void markMessageAsRead(String messageId) {
         String validId = InputSecurityUtils.secureId(messageId);
-        Message message = messageRepository.findById(validId).orElseThrow(() -> {
+        Message message = messageRepository.findById(Long.parseLong(validId)).orElseThrow(() -> {
             logger.warn("Message not found with ID: {}", validId);
             return new ServiceException("Message not found", HttpStatus.NOT_FOUND);
         });
-        //message.setIsRead(true);
+        // message.setIsRead(true);
         messageRepository.save(message);
         logger.info("Message marked as read. ID: {}", validId);
     }
 }
-

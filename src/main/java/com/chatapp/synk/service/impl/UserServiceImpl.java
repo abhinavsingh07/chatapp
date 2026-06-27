@@ -103,7 +103,7 @@ public class UserServiceImpl implements UserService {
         logger.debug("Fetching user by ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
 
-        Optional<UserDTO> result = userRepository.findById(validId).map(Mapper::mapToUserDTO);
+        Optional<UserDTO> result = userRepository.findById(Long.parseLong(validId)).map(Mapper::mapToUserDTO);
 
         if (result.isEmpty()) {
             logger.warn("No user found with ID: {}", validId);
@@ -169,7 +169,7 @@ public class UserServiceImpl implements UserService {
 
         String validId = InputSecurityUtils.secureId(userId);
 
-        Optional<User> optionalUser = userRepository.findById(validId);
+        Optional<User> optionalUser = userRepository.findById(Long.parseLong(validId));
         if (optionalUser.isEmpty()) {
             logger.warn("User not found while updating. ID: {}", validId);
             throw new ServiceException("User not found with ID", HttpStatus.NOT_FOUND);
@@ -215,7 +215,7 @@ public class UserServiceImpl implements UserService {
         String validId = InputSecurityUtils.secureId(userId);
 
         // Fetch user from DB first
-        User user = userRepository.findById(validId)
+        User user = userRepository.findById(Long.parseLong(validId))
                 .orElseThrow(() -> new ServiceException("User not found with ID", HttpStatus.NOT_FOUND));
 
         // Find lastactive time from redis
@@ -243,7 +243,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(String userId) {
         logger.info("Deleting user with ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
-        userRepository.deleteById(validId);
+        userRepository.deleteById(Long.parseLong(validId));
         logger.info("User deleted successfully. ID: {}", userId);
     }
 

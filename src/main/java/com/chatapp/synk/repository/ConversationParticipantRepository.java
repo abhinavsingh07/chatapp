@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ConversationParticipantRepository extends JpaRepository<ConversationParticipant, String> {
-    List<ConversationParticipant> findByConversationId(String conversationId);
+public interface ConversationParticipantRepository extends JpaRepository<ConversationParticipant, Long> {
+    List<ConversationParticipant> findByConversationId(Long conversationId);
 }

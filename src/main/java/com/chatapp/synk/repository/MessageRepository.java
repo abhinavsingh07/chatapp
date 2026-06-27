@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MessageRepository extends JpaRepository<Message, String> {
+public interface MessageRepository extends JpaRepository<Message, Long> {
 
-    List<Message> findByConversationIdOrderBySentAtAsc(String conversationId);
+    List<Message> findByConversationIdOrderBySentAtAsc(Long conversationId);
 
-    List<Message> findByConversationIdAndReceiverId(String conversationId, String receiverId);
+    List<Message> findByConversationIdAndReceiverId(Long conversationId, Long receiverId);
 
     Optional<Message> findByClientMessageId(String clientMessageId);
 

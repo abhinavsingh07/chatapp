@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 
 public class ConversationDTO {
     private String id;
+    private String identifierId;
 
     @NotNull(message = "Conversation type is required")
     private String conversationType;
@@ -22,6 +23,14 @@ public class ConversationDTO {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getConversationType() {

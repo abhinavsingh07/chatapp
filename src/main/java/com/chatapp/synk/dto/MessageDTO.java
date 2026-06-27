@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public class MessageDTO {
 
     private String id;
+    private String identifierId;
     @NotBlank(message = "Conversation ID is required")
     private String conversationId;
     @NotBlank(message = "Sender ID is required")
@@ -29,6 +30,14 @@ public class MessageDTO {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getConversationId() {

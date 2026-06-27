@@ -5,14 +5,18 @@ import com.chatapp.synk.enums.UserStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.GenericGenerator;
+
 @Entity
-@Table(name = "users", schema = "chatapp",
-        uniqueConstraints = @UniqueConstraint(name = "uq_phone_email", columnNames = {"phone_number", "email"}))
+@Table(name = "users", schema = "chatapp", uniqueConstraints = @UniqueConstraint(name = "uq_phone_email", columnNames = {
+        "phone_number", "email" }))
 public class User {
     public static final String ALIAS_USER = "USER";
     @Id
-    @Column(name = "id", nullable = false, length = 50)
-    private String id;
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
+    @Column(name = "id", nullable = false)
+    private Long id;
 
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
@@ -33,11 +37,11 @@ public class User {
     private String about;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    //LocalDateTime is DATETIME data type in db
+    // LocalDateTime is DATETIME data type in db
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    //LocalDateTime is DATETIME data type in db
+    // LocalDateTime is DATETIME data type in db
     private LocalDateTime updatedAt;
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
@@ -50,14 +54,17 @@ public class User {
     @Column(name = "user_last_seen")
     private String userlastSeen;
 
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
+
     // Constructors
     public User() {
     }
 
-    public User(String id, String phoneNumber, String email, 
-        String password, String name, String profilePictureUrl, 
-        String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
-            
+    public User(Long id, String phoneNumber, String email,
+            String password, String name, String profilePictureUrl,
+            String about, LocalDateTime createdAt, LocalDateTime updatedAt) {
+
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.email = email;
@@ -85,11 +92,11 @@ public class User {
     }
 
     // Getters and Setters
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -180,4 +187,14 @@ public class User {
     public void setUserRole(RoleName userRole) {
         this.userRole = userRole;
     }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
+    }
+
+
 }

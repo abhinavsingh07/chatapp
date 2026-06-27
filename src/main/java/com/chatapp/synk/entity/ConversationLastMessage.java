@@ -10,11 +10,11 @@ public class ConversationLastMessage {
 
     @Id
     @Column(name = "conversation_id", nullable = false, length = 50)//this is unique and PK our on duplicate key update query works.
-    private String conversationId;
+    private Long conversationId;
     @Column(name = "message_id", nullable = false, length = 50)
-    private String messageId;
+    private Long messageId;
     @Column(name = "sender_id", nullable = false, length = 50)
-    private String senderId;
+    private Long senderId;
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
     @Column(name = "sent_at", nullable = false)
@@ -26,31 +26,6 @@ public class ConversationLastMessage {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
-    }
-
-
-    public String getConversationId() {
-        return conversationId;
-    }
-
-    public void setConversationId(String conversationId) {
-        this.conversationId = conversationId;
-    }
-
-    public String getMessageId() {
-        return messageId;
-    }
-
-    public void setMessageId(String messageId) {
-        this.messageId = messageId;
-    }
-
-    public String getSenderId() {
-        return senderId;
-    }
-
-    public void setSenderId(String senderId) {
-        this.senderId = senderId;
     }
 
     public String getContent() {
@@ -65,6 +40,30 @@ public class ConversationLastMessage {
         return sentAt;
     }
 
+    public Long getConversationId() {
+        return conversationId;
+    }
+
+    public void setConversationId(Long conversationId) {
+        this.conversationId = conversationId;
+    }
+
+    public Long getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(Long messageId) {
+        this.messageId = messageId;
+    }
+
+    public Long getSenderId() {
+        return senderId;
+    }
+
+    public void setSenderId(Long senderId) {
+        this.senderId = senderId;
+    }
+
     public void setSentAt(Instant sentAt) {
         this.sentAt = sentAt;
     }
@@ -76,4 +75,6 @@ public class ConversationLastMessage {
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    
 }

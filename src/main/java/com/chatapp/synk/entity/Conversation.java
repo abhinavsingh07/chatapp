@@ -2,6 +2,7 @@ package com.chatapp.synk.entity;
 
 import com.chatapp.synk.enums.ConversationType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 
@@ -10,8 +11,13 @@ import java.time.LocalDateTime;
 public class Conversation {
     public static final String ALIAS_CONVERSATION = "CONV";
     @Id
-    @Column(name = "id", nullable = false, length = 50)
-    private String id;
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
+    @Column(name = "id", nullable = false)
+    private Long id;
+
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
 
     @Column(name = "conversation_type", length = 10)
     private String conversationType = ConversationType.ONE_TO_ONE.toString();
@@ -28,8 +34,8 @@ public class Conversation {
         this.createdAt = LocalDateTime.now();
     }
 
-    public Conversation(String id, String conversationType, String privateChatKey) {
-        this.id = id;
+    public Conversation(String identifierId, String conversationType, String privateChatKey) {
+        this.identifierId = identifierId;
         this.conversationType = conversationType;
         this.privateChatKey = privateChatKey;
     }
@@ -38,12 +44,20 @@ public class Conversation {
         // Default constructor
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getConversationType() {

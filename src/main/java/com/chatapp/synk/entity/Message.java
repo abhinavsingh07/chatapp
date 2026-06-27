@@ -2,6 +2,7 @@ package com.chatapp.synk.entity;
 
 import com.chatapp.synk.enums.MessageStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 
@@ -12,23 +13,28 @@ public class Message {
     public static final String ALIAS_MESSAGE = "MESG";
 
     @Id
-    @Column(name = "id", length = 50, nullable = false)
-    private String id;
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
+    @Column(name = "id", nullable = false)
+    private Long id;
 
-    @Column(name = "conversation_id", nullable = false, length = 50)
-    private String conversationId;
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
 
-    @Column(name = "sender_id", nullable = false, length = 50)
-    private String senderId;
+    @Column(name = "conversation_id", nullable = false)
+    private Long conversationId;
 
-    @Column(name = "receiver_id", nullable = false, length = 50)
-    private String receiverId;
+    @Column(name = "sender_id", nullable = false)
+    private Long senderId;
+
+    @Column(name = "receiver_id", nullable = false)
+    private Long receiverId;
 
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "media_id", length = 50)
-    private String mediaId;
+    private Long mediaId;
 
     @Column(name = "message_status")
     @Enumerated(EnumType.STRING)
@@ -46,36 +52,43 @@ public class Message {
         sentAt = Instant.now(); // Always UTC
     }
 
-    // Getters & Setters
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getConversationId() {
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
+    }
+
+    public Long getConversationId() {
         return conversationId;
     }
 
-    public void setConversationId(String conversationId) {
+    public void setConversationId(Long conversationId) {
         this.conversationId = conversationId;
     }
 
-    public String getSenderId() {
+    public Long getSenderId() {
         return senderId;
     }
 
-    public void setSenderId(String senderId) {
+    public void setSenderId(Long senderId) {
         this.senderId = senderId;
     }
 
-    public String getReceiverId() {
+    public Long getReceiverId() {
         return receiverId;
     }
 
-    public void setReceiverId(String receiverId) {
+    public void setReceiverId(Long receiverId) {
         this.receiverId = receiverId;
     }
 
@@ -87,11 +100,11 @@ public class Message {
         this.content = content;
     }
 
-    public String getMediaId() {
+    public Long getMediaId() {
         return mediaId;
     }
 
-    public void setMediaId(String mediaId) {
+    public void setMediaId(Long mediaId) {
         this.mediaId = mediaId;
     }
 

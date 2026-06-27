@@ -52,7 +52,7 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.findByEmail(adminEmail).isEmpty()) {
             logger.info("Creating default admin user");
             User adminUser = new User();
-            adminUser.setId(RandomUUIDGenerater.getId(User.ALIAS_USER).toString());
+            adminUser.setIdentifierId(RandomUUIDGenerater.getId(User.ALIAS_USER).toString());
             adminUser.setPhoneNumber(adminPhone);
             adminUser.setEmail(adminEmail);
             adminUser.setName(adminName);

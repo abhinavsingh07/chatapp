@@ -1,6 +1,7 @@
 package com.chatapp.synk.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 
@@ -9,14 +10,19 @@ import java.time.LocalDateTime;
 public class ConversationParticipant {
     public static final String ALIAS_PARTICIPANT = "PART";
     @Id
-    @Column(name = "id", nullable = false,length = 50)
-    private String id;
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
+    @Column(name = "id", nullable = false)
+    private Long id;
+
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
 
     @Column(name = "conversation_id", nullable = false,length = 50)
-    private String conversationId;
+    private Long conversationId;
 
     @Column(name = "user_id", nullable = false,length = 50)
-    private String userId;
+    private Long userId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -24,8 +30,8 @@ public class ConversationParticipant {
     public ConversationParticipant() {
     }
 
-    public ConversationParticipant(String id, String conversationId, String userId) {
-        this.id = id;
+    public ConversationParticipant(String identifierId, Long conversationId, Long userId) {
+        this.identifierId = identifierId;
         this.conversationId = conversationId;
         this.userId = userId;
     }
@@ -38,27 +44,35 @@ public class ConversationParticipant {
     // Getters and Setters
 
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getConversationId() {
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
+    }
+
+    public Long getConversationId() {
         return conversationId;
     }
 
-    public void setConversationId(String conversationId) {
+    public void setConversationId(Long conversationId) {
         this.conversationId = conversationId;
     }
 
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 

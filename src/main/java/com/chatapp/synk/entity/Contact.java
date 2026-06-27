@@ -3,6 +3,7 @@ package com.chatapp.synk.entity;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.EmailStatus;
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 
@@ -11,8 +12,13 @@ import java.time.LocalDateTime;
 public class Contact {
     public static final String ALIAS_CONTACT = "CONT";
     @Id
-    @Column(name = "id", nullable = false, length = 50)
-    private String id;
+    @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
+    @GeneratedValue(generator = "snowflake_gen")
+    @Column(name = "id", nullable = false)
+    private Long id;
+
+    @Column(name = "identifier_id", length = 50)
+    private String identifierId;
 
     @Column(name = "user_id", nullable = false, length = 50)
     private String userId;
@@ -40,12 +46,20 @@ public class Contact {
         createdAt = LocalDateTime.now();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getUserId() {

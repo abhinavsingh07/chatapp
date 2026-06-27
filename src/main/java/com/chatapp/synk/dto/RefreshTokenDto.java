@@ -5,6 +5,7 @@ import java.time.Instant;
 public class RefreshTokenDto {
 
     private String id;
+    private String identifierId;
     private String userId;
     private String tokenHash;
     private Instant issuedAt;
@@ -25,6 +26,14 @@ public class RefreshTokenDto {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
     }
 
     public String getUserId() {

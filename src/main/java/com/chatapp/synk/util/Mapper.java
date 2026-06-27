@@ -7,7 +7,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class Mapper {
     public static UserDTO mapToUserDTO(User user) {
         UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
+        dto.setId(String.valueOf(user.getId()));
+        dto.setIdentifierId(user.getIdentifierId());
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setPassword(user.getPassword());
         dto.setName(user.getName());
@@ -23,7 +24,7 @@ public class Mapper {
     public static User mapToUserEntity(UserDTO dto, PasswordEncoder passwordEncoder) {
         String generatedId = RandomUUIDGenerater.getId(User.ALIAS_USER).toString();
         User user = new User();
-        user.setId(generatedId);
+        user.setIdentifierId(generatedId);
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setName(dto.getName());
@@ -38,7 +39,7 @@ public class Mapper {
     public static Contact mapToContactEntity(ContactDTO dto) {
         String generatedId = RandomUUIDGenerater.getId(Contact.ALIAS_CONTACT).toString();
         Contact contact = new Contact();
-        contact.setId(generatedId);
+        contact.setIdentifierId(generatedId);
         contact.setUserId(dto.getUserId());
         contact.setContactUserId(dto.getContactUserId());
         contact.setContactStatus(dto.getContactStatus());
@@ -49,7 +50,8 @@ public class Mapper {
 
     public static ContactDTO mapToContactDTO(Contact contact) {
         ContactDTO dto = new ContactDTO();
-        dto.setId(contact.getId());
+        dto.setId(String.valueOf(contact.getId()));
+        dto.setIdentifierId(contact.getIdentifierId());
         dto.setUserId(contact.getUserId());
         dto.setContactUserId(contact.getContactUserId());
         dto.setContactStatus(contact.getContactStatus());
@@ -60,35 +62,45 @@ public class Mapper {
 
     public static Conversation mapToConversationEntity(ConversationDTO dto) {
         Conversation conversation = new Conversation();
-        conversation.setId(RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString());
+        conversation.setIdentifierId(RandomUUIDGenerater.getId(Conversation.ALIAS_CONVERSATION).toString());
         conversation.setConversationType(dto.getConversationType());
         return conversation;
     }
 
     public static ConversationDTO mapToConversationDTO(Conversation entity) {
-        return new ConversationDTO(entity.getId(), entity.getConversationType());
+        ConversationDTO dto = new ConversationDTO();
+        dto.setId(String.valueOf(entity.getId()));
+        dto.setIdentifierId(entity.getIdentifierId());
+        dto.setConversationType(entity.getConversationType());
+        return dto;
     }
 
     public static ConversationParticipant mapToParticipantEntity(ConversationParticipantDTO dto) {
         ConversationParticipant participant = new ConversationParticipant();
-        participant.setId(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString());
-        participant.setConversationId(dto.getConversationId());
-        participant.setUserId(dto.getUserId());
+        participant.setIdentifierId(RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT).toString());
+        participant.setConversationId(Long.parseLong(dto.getConversationId()));
+        participant.setUserId(Long.parseLong(dto.getUserId()));
         return participant;
     }
 
     public static ConversationParticipantDTO mapToParticipantDTO(ConversationParticipant entity) {
-        return new ConversationParticipantDTO(entity.getId(), entity.getConversationId(), entity.getUserId());
+        ConversationParticipantDTO dto = new ConversationParticipantDTO();
+        dto.setId(String.valueOf(entity.getId()));
+        dto.setIdentifierId(entity.getIdentifierId());
+        dto.setConversationId(String.valueOf(entity.getConversationId()));
+        dto.setUserId(String.valueOf(entity.getUserId()));
+        return dto;
     }
 
     public static MessageDTO mapToMessageDTO(Message message) {
         MessageDTO dto = new MessageDTO();
-        dto.setId(message.getId());
-        dto.setConversationId(message.getConversationId());
-        dto.setSenderId(message.getSenderId());
-        dto.setReceiverId(message.getReceiverId());
+        dto.setId(String.valueOf(message.getId()));
+        dto.setIdentifierId(message.getIdentifierId());
+        dto.setConversationId(String.valueOf(message.getConversationId()));
+        dto.setSenderId(String.valueOf(message.getSenderId()));
+        dto.setReceiverId(String.valueOf(message.getReceiverId()));
         dto.setContent(message.getContent());
-        dto.setMediaId(message.getMediaId());
+        dto.setMediaId(String.valueOf(message.getMediaId()));
         dto.setMessageStatus(message.getMessageStatus());
         dto.setSentAt(message.getSentAt().toString());
         return dto;
@@ -96,20 +108,20 @@ public class Mapper {
 
     public static Message mapToMessageEntity(MessageDTO dto) {
         Message message = new Message();
-        message.setId(RandomUUIDGenerater.getId(Message.ALIAS_MESSAGE).toString());
-        message.setConversationId(dto.getConversationId());
-        message.setSenderId(dto.getSenderId());
-        message.setReceiverId(dto.getReceiverId());
+        message.setIdentifierId(RandomUUIDGenerater.getId(Message.ALIAS_MESSAGE).toString());
+        message.setConversationId(Long.parseLong(dto.getConversationId()));
+        message.setSenderId(Long.parseLong(dto.getSenderId()));
+        message.setReceiverId(Long.parseLong(dto.getReceiverId()));
         message.setContent(dto.getContent());
-        message.setMediaId(dto.getMediaId());
+        message.setMediaId(Long.parseLong(dto.getMediaId()));
         message.setMessageStatus(dto.getMessageStatus());
         return message;
     }
 
     public static RefreshToken mapToRefreshTokenEntity(RefreshTokenDto dto) {
         RefreshToken refreshToken = new RefreshToken();
-        String id = dto.getId() != null ? dto.getId() : RandomUUIDGenerater.getId(RefreshToken.ALIAS_REFRESH_TOKEN).toString();
-        refreshToken.setId(id);
+        String identifierId = dto.getIdentifierId() != null ? dto.getIdentifierId() : RandomUUIDGenerater.getId(RefreshToken.ALIAS_REFRESH_TOKEN).toString();
+        refreshToken.setIdentifierId(identifierId);
         refreshToken.setUserId(dto.getUserId());
         refreshToken.setTokenHash(dto.getTokenHash());
         refreshToken.setIssuedAt(dto.getIssuedAt());
@@ -125,7 +137,8 @@ public class Mapper {
 
     public static RefreshTokenDto mapToRefreshTokenDto(RefreshToken refreshToken) {
         RefreshTokenDto dto = new RefreshTokenDto();
-        dto.setId(refreshToken.getId());
+        dto.setId(String.valueOf(refreshToken.getId()));
+        dto.setIdentifierId(refreshToken.getIdentifierId());
         dto.setUserId(refreshToken.getUserId());
         dto.setTokenHash(refreshToken.getTokenHash());
         dto.setIssuedAt(refreshToken.getIssuedAt());

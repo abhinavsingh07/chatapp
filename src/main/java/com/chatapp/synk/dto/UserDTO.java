@@ -24,6 +24,7 @@ public class UserDTO {
     private UserStatus status;
     private RoleName roleName;
     private String userlastSeen;
+    private String identifierId;
 
     public UserDTO() {
     }
@@ -143,4 +144,13 @@ public class UserDTO {
     public void setUserlastSeen(String userlastSeen) {
         this.userlastSeen = userlastSeen;
     }
+
+    public String getIdentifierId() {
+        return identifierId;
+    }
+
+    public void setIdentifierId(String identifierId) {
+        this.identifierId = identifierId;
+    }
+    
 }

@@ -1,21 +1,60 @@
 package com.chatapp.synk.dto;
 
-public interface ConversationLastMsgDTO {
-    String getLastMessageId();
+public class ConversationLastMsgDTO {
 
-    String getConversationId();
+    private String conversationId;
+    private String messageId;
+    private String senderId;
+    private String content;
+    private String sentAt;
+    private String updatedAt;
 
-    String getContent();
+    public String getConversationId() {
+        return conversationId;
+    }
 
-    String getSentAt();
+    public void setConversationId(String conversationId) {
+        this.conversationId = conversationId;
+    }
 
-    String getSenderId();
+    public String getMessageId() {
+        return messageId;
+    }
 
-    String getConversationType();
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
+    }
 
-    String getParticipantId();
+    public String getSenderId() {
+        return senderId;
+    }
 
-    String getParticipantName();
+    public void setSenderId(String senderId) {
+        this.senderId = senderId;
+    }
 
-    String getParticipantProfilePic();
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getSentAt() {
+        return sentAt;
+    }
+
+    public void setSentAt(String sentAt) {
+        this.sentAt = sentAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }

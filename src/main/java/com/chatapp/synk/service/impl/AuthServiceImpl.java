@@ -89,7 +89,7 @@ public class AuthServiceImpl implements AuthService {
         // TODO: Reject password reset when OTP is missing, expired, or already used.
 
         UserDTO existingUser = getUserForForgotPassword(phoneNumberOrEmail);
-        User user = userRepository.findById(existingUser.getId())
+        User user = userRepository.findById(Long.parseLong(existingUser.getId()))
                 .orElseThrow(() -> new ServiceException("User not found with ID", HttpStatus.NOT_FOUND));
 
         user.setPassword(passwordEncoder.encode(newPassword));
