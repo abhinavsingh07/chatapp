@@ -5,11 +5,11 @@ import com.chatapp.synk.enums.EmailStatus;
 import com.chatapp.synk.enums.UserStatus;
 
 public class ContactUserDTO {
-    private Long contactId;
-    private Long userId;
+    private String contactId;
+    private String userId;
     private ContactStatus contactStatus;
     private EmailStatus emailStatus;
-    private Long contactUserId;
+    private String contactUserId;
     private String contactEmail;
     private String identifierId;
 
@@ -35,12 +35,12 @@ public class ContactUserDTO {
             String profilePictureUrl,
             UserStatus status) {
 
-        this.contactId = contactId;
+        this.contactId = String.valueOf(contactId);
         this.contactStatus = contactStatus;
         this.emailStatus = emailStatus;
-        this.contactUserId = contactUserId;
+        this.contactUserId = String.valueOf(contactUserId);
         this.contactEmail = contactEmail;
-        this.userId = userId;
+        this.userId = String.valueOf(userId);
         this.identifierId = identifierId;
         this.name = name;
         this.phoneNumber = phoneNumber;
@@ -53,12 +53,28 @@ public class ContactUserDTO {
     public ContactUserDTO() {
     }
 
-    public Long getContactId() {
+    public String getContactId() {
         return contactId;
     }
 
-    public void setContactId(Long contactId) {
+    public void setContactId(String contactId) {
         this.contactId = contactId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getContactUserId() {
+        return contactUserId;
+    }
+
+    public void setContactUserId(String contactUserId) {
+        this.contactUserId = contactUserId;
     }
 
     public ContactStatus getContactStatus() {
@@ -75,14 +91,6 @@ public class ContactUserDTO {
 
     public void setEmailStatus(EmailStatus emailStatus) {
         this.emailStatus = emailStatus;
-    }
-
-    public Long getContactUserId() {
-        return contactUserId;
-    }
-
-    public void setContactUserId(Long contactUserId) {
-        this.contactUserId = contactUserId;
     }
 
     public String getName() {
@@ -131,14 +139,6 @@ public class ContactUserDTO {
 
     public void setContactEmail(String contactEmail) {
         this.contactEmail = contactEmail;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
     }
 
     public String getIdentifierId() {

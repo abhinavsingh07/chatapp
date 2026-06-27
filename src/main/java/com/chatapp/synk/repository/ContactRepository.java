@@ -21,17 +21,18 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
 
     @Query("""
             SELECT new com.chatapp.synk.dto.ContactUserDTO(
-                c.identifierId,
+                c.id,
                 c.contactStatus,
                 c.emailStatus,
                 c.contactUserId,
                 c.email,
+                c.userId,
+                c.identifierId,
                 u.name,
                 u.phoneNumber,
                 u.email,
                 u.profilePictureUrl,
-                u.status,
-                c.userId
+                u.status
             )
             FROM Contact c
             LEFT JOIN User u ON c.contactUserId = u.id
@@ -52,11 +53,10 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
                 u.phoneNumber,
                 u.email,
                 u.profilePictureUrl,
-                u.status,
+                u.status
                 )
-                FROM Contact
-                c JOIN
-                User u
+                FROM Contact c 
+                JOIN User u
                 ON c.contactUserId=u.id
             """)
     List<ContactUserDTO> findAllContactsWithUserDetails();

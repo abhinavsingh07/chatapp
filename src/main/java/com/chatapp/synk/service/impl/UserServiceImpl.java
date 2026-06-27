@@ -278,6 +278,7 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
+    //we will update the contactUserId in contact table on user registration when registering user added to contact list by email buy other user. 
     private void handleInvitedFlow(User savedUser) {
         if (logger.isDebugEnabled()) {
             logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
