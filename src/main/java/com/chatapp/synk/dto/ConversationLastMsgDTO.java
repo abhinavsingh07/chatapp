@@ -1,20 +1,34 @@
 package com.chatapp.synk.dto;
 
-public class ConversationLastMsgDTO {
+import java.time.Instant;
 
-    private String conversationId;
+public class ConversationLastMsgDTO {
+    // ConversationLastMessage fields
     private String messageId;
-    private String senderId;
+    private String conversationId;
     private String content;
     private String sentAt;
-    private String updatedAt;
+    private String senderId;
+    // Conversation field
+    private String conversationType;
+    // User fields
+    private String userId;
+    private String userName;
+    private String userProfilePictureUrl;
 
-    public String getConversationId() {
-        return conversationId;
-    }
+    // private String updatedAt;
 
-    public void setConversationId(String conversationId) {
-        this.conversationId = conversationId;
+    public ConversationLastMsgDTO(Long messageId, Long conversationId, String content, Instant sentAt,
+            Long senderId, String conversationType, Long userId, String userName, String userProfilePictureUrl) {
+        this.messageId = String.valueOf(messageId);
+        this.conversationId = String.valueOf(conversationId);
+        this.content = content;
+        this.sentAt = sentAt.toString();
+        this.senderId = String.valueOf(senderId);
+        this.conversationType = conversationType;
+        this.userId = String.valueOf(userId);
+        this.userName = userName;
+        this.userProfilePictureUrl = userProfilePictureUrl;
     }
 
     public String getMessageId() {
@@ -25,12 +39,12 @@ public class ConversationLastMsgDTO {
         this.messageId = messageId;
     }
 
-    public String getSenderId() {
-        return senderId;
+    public String getConversationId() {
+        return conversationId;
     }
 
-    public void setSenderId(String senderId) {
-        this.senderId = senderId;
+    public void setConversationId(String conversationId) {
+        this.conversationId = conversationId;
     }
 
     public String getContent() {
@@ -49,12 +63,44 @@ public class ConversationLastMsgDTO {
         this.sentAt = sentAt;
     }
 
-    public String getUpdatedAt() {
-        return updatedAt;
+    public String getSenderId() {
+        return senderId;
     }
 
-    public void setUpdatedAt(String updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setSenderId(String senderId) {
+        this.senderId = senderId;
+    }
+
+    public String getConversationType() {
+        return conversationType;
+    }
+
+    public void setConversationType(String conversationType) {
+        this.conversationType = conversationType;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserProfilePictureUrl() {
+        return userProfilePictureUrl;
+    }
+
+    public void setUserProfilePictureUrl(String userProfilePictureUrl) {
+        this.userProfilePictureUrl = userProfilePictureUrl;
     }
 
 }

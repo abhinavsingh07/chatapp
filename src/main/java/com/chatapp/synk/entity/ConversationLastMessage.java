@@ -18,9 +18,8 @@ public class ConversationLastMessage {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
     @Column(name = "sent_at", nullable = false)
-    private Instant sentAt;//Instant is UTC time client converts this time on their browser or mobile sdk and get its time according to it timezone
+    private Instant sentAt; //Instant is UTC time client converts this time on their browser or mobile sdk and get its time according to it timezone
     @Column(name = "updated_at",nullable = false)
-    //LocalDateTime is DATETIME data type in db
     private Instant updatedAt;
 
     @PreUpdate

@@ -44,7 +44,6 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
         logger.info("Fetching chat list for loggedInUserId={}", loggedInUserId);
         String validUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
         // String validUserId = InputSecurityUtils.secureId(loggedInUserId);
-        logger.info("Fetching chat list for userId={}", validUserId);
         List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository
                 .findUserConversations(Long.parseLong(validUserId));
         if(logger.isDebugEnabled()) {
