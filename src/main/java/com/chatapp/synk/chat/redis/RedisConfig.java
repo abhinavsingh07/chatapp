@@ -2,7 +2,6 @@ package com.chatapp.synk.chat.redis;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +15,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import com.chatapp.synk.config.AppProperties;
 
 import java.time.Duration;
 
@@ -34,18 +35,19 @@ public class RedisConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisConfig.class);
 
-    @Value("${spring.redis.host}") // fallback to localhost if env variable not set
-    private String redisHost;
+    private final AppProperties appProperties;
 
-    @Value("${spring.redis.port}")
-    private int redisPort;
+    public RedisConfig(AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
 
     /**
-     * Creates RedisConnectionFactory using host and port from environment variables.
+     * Creates RedisConnectionFactory using host and port from AppProperties.
      */
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
+        return new LettuceConnectionFactory(
+                new RedisStandaloneConfiguration(appProperties.getRedisHost(), appProperties.getRedisPort()));
     }
 
     /**
@@ -54,11 +56,16 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         logger.info("Initializing Redis CacheManager with default configuration.");
-        return RedisCacheManager.builder(connectionFactory).cacheDefaults(redisCacheConfiguration()).build();
+        return RedisCacheManager
+        .builder(connectionFactory)
+        .cacheDefaults(redisCacheConfiguration())
+        .build();
     }
 
     /**
      * Creates the default cache configuration for Redis.
+     * Cacheable cache TTL = handled by CacheManager
+     * redisTemplate manual keys TTL = you must set manually
      */
     @Bean
     public RedisCacheConfiguration redisCacheConfiguration() {
@@ -67,7 +74,7 @@ public class RedisConfig {
         }
         return RedisCacheConfiguration
                 .defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(1))
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
     }

@@ -8,10 +8,9 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.chatapp.synk.config.AppProperties;
 import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 
 import java.security.Key;
@@ -25,12 +24,12 @@ public class JwtUtil {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
     private final Key secretKey;
 
-    @Autowired
-    // @Autowired here tells Spring:
-    // "When creating a JwtUtil bean, call this constructor and inject its
-    // parameters automatically."
-    public JwtUtil(@Value("${jwt.secret}") String secret) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+    /**
+     * Constructor that initializes JWT utility with secret key from centralized AppProperties.
+     * Spring automatically injects AppProperties when creating JwtUtil bean.
+     */
+    public JwtUtil(AppProperties appProperties) {
+        this.secretKey = Keys.hmacShaKeyFor(appProperties.getJwtSecret().getBytes());
     }
 
     // Generate JWT token with claims
