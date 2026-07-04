@@ -14,7 +14,8 @@ import java.util.List;
 
 /**
  * Scheduled cleanup service for expired/abandoned media uploads.
- * Removes UPLOAD_PENDING media records that have not been completed within the configured time window.
+ * Removes UPLOAD_PENDING media records that have not been completed within the
+ * configured time window.
  * Also attempts to clean up orphaned cloud storage objects.
  */
 @Component
@@ -23,13 +24,13 @@ public class MediaCleanupService {
     private static final Logger logger = LoggerFactory.getLogger(MediaCleanupService.class);
 
     private final MediaRepository mediaRepository;
-    private final CloudStorageService cloudStorageService;
+    private final CloudStorageService awsStorageService;
     private final AppProperties appProperties;
 
-    public MediaCleanupService(MediaRepository mediaRepository, CloudStorageService cloudStorageService,
+    public MediaCleanupService(MediaRepository mediaRepository, CloudStorageService awsStorageService,
             AppProperties appProperties) {
         this.mediaRepository = mediaRepository;
-        this.cloudStorageService = cloudStorageService;
+        this.awsStorageService = awsStorageService;
         this.appProperties = appProperties;
     }
 
@@ -53,7 +54,7 @@ public class MediaCleanupService {
 
             // Find all UPLOAD_PENDING media older than cutoff
             List<Media> expiredMedia = mediaRepository
-                .findByStatusAndCreatedAtBefore(MediaUploadStatus.UPLOAD_PENDING, cutoffTime);
+                    .findByStatusAndCreatedAtBefore(MediaUploadStatus.UPLOAD_PENDING, cutoffTime);
 
             if (expiredMedia.isEmpty()) {
                 logger.info("No expired UPLOAD_PENDING media found");
@@ -69,7 +70,7 @@ public class MediaCleanupService {
             for (Media media : expiredMedia) {
                 try {
                     // Attempt to delete cloud storage object
-                    boolean deleted = cloudStorageService.deleteObject(media.getS3Key());
+                    boolean deleted = awsStorageService.deleteObject(media.getS3Key());
                     if (deleted) {
                         logger.debug("Deleted cloud storage object: {}", media.getS3Key());
                     } else {
@@ -78,20 +79,20 @@ public class MediaCleanupService {
 
                     // Delete media record from database
                     mediaRepository.deleteById(media.getId());
-                    logger.info("Cleaned up media ID: {} (userId: {}, s3Key: {})", 
-                        media.getId(), media.getOwnerUserId(), media.getS3Key());
+                    logger.info("Cleaned up media ID: {} (userId: {}, s3Key: {})",
+                            media.getId(), media.getOwnerUserId(), media.getS3Key());
                     successCount++;
 
                 } catch (Exception e) {
-                    logger.error("Error cleaning up media ID: {} (s3Key: {}). Will retry in next cleanup cycle.", 
-                        media.getId(), media.getS3Key(), e);
+                    logger.error("Error cleaning up media ID: {} (s3Key: {}). Will retry in next cleanup cycle.",
+                            media.getId(), media.getS3Key(), e);
                     failureCount++;
                     // Continue processing other records even if one fails
                 }
             }
 
-            logger.info("Cleanup completed: {} successful, {} failed out of {} media records", 
-                successCount, failureCount, expiredMedia.size());
+            logger.info("Cleanup completed: {} successful, {} failed out of {} media records",
+                    successCount, failureCount, expiredMedia.size());
 
         } catch (Exception e) {
             logger.error("Fatal error during media cleanup. Will retry in next scheduled run.", e);

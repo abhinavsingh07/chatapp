@@ -25,7 +25,7 @@ import java.util.List;
  * - Downloading media (get pre-signed download URLs)
  */
 @RestController
-@RequestMapping("/api/media")
+@RequestMapping("/media")
 public class MediaController {
 
     private static final Logger logger = LoggerFactory.getLogger(MediaController.class);
@@ -38,7 +38,8 @@ public class MediaController {
 
     /**
      * Initiate a media upload session.
-     * Validates file type/size, creates Media DB record (UPLOAD_PENDING), returns pre-signed PUT URL.
+     * Validates file type/size, creates Media DB record (UPLOAD_PENDING), returns
+     * pre-signed PUT URL.
      * Frontend uses the returned URL to upload file directly to S3.
      *
      * @param request Upload initialization request with file metadata
@@ -48,27 +49,18 @@ public class MediaController {
     @PostMapping("/upload-init")
     public ResponseEntity<SuccessResponse<MediaUploadInitResponse>> initiateUpload(
             @Valid @RequestBody MediaUploadInitRequest request) {
-        try {
-            Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
-            logger.info("Upload init request received for userId: {}, mediaType: {}, usageType: {}",
-                    userId, request.getMediaType(), request.getUsageType());
 
-            MediaUploadInitResponse response = mediaUploadService.initiateUpload(userId, request);
+        Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        logger.info("Upload init request received for userId: {}, mediaType: {}, usageType: {}",
+                userId, request.getMediaType(), request.getUsageType());
 
-            logger.debug("Upload session initiated: mediaId: {}", response.getMediaId());
-            return ResponseEntity.ok(new SuccessResponse<>(
-                    HttpStatus.OK,
-                    "Upload initiated. Use the presigned URL to upload file directly to S3.",
-                    List.of(response)
-            ));
+        MediaUploadInitResponse response = mediaUploadService.initiateUpload(userId, request);
 
-        } catch (ServiceException e) {
-            logger.warn("Upload init validation failed: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            logger.error("Unexpected error during upload init", e);
-            throw new ServiceException("Failed to initiate upload", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        logger.debug("Upload session initiated: mediaId: {}", response.getMediaId());
+        return ResponseEntity.ok(new SuccessResponse<>(
+                HttpStatus.OK,
+                "Upload initiated. Use the presigned URL to upload file directly to S3.",
+                List.of(response)));
     }
 
     /**
@@ -83,26 +75,17 @@ public class MediaController {
     @PostMapping("/upload-complete/{mediaId}")
     public ResponseEntity<SuccessResponse<MediaUploadCompleteResponse>> completeUpload(
             @PathVariable Long mediaId) {
-        try {
-            Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
-            logger.info("Upload complete request for mediaId: {}, userId: {}", mediaId, userId);
+        Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        logger.info("Upload complete request for mediaId: {}, userId: {}", mediaId, userId);
 
-            MediaUploadCompleteResponse response = mediaUploadService.completeUpload(userId, mediaId);
+        MediaUploadCompleteResponse response = mediaUploadService.completeUpload(userId, mediaId);
 
-            logger.info("Media {} marked as ACTIVE", mediaId);
-            return ResponseEntity.ok(new SuccessResponse<>(
-                    HttpStatus.OK,
-                    "Upload completed successfully. Media is now available for use.",
-                    List.of(response)
-            ));
+        logger.info("Media {} marked as ACTIVE", mediaId);
+        return ResponseEntity.ok(new SuccessResponse<>(
+                HttpStatus.OK,
+                "Upload completed successfully. Media is now available for use.",
+                List.of(response)));
 
-        } catch (ServiceException e) {
-            logger.warn("Upload completion failed for mediaId {}: {}", mediaId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            logger.error("Unexpected error during upload completion for mediaId: {}", mediaId, e);
-            throw new ServiceException("Failed to complete upload", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 
     /**
@@ -114,28 +97,19 @@ public class MediaController {
      * @return SuccessResponse containing presigned download URL
      * @throws ServiceException if media not found, not ACTIVE, or user unauthorized
      */
-    @GetMapping("/pre-signed-url")
+    @GetMapping("/pre-signed-url/{mediaId}")
     public ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> getPreSignedUrl(
-            @RequestParam Long mediaId) {
-        try {
-            Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
-            logger.debug("Pre-signed download URL request for mediaId: {}, userId: {}", mediaId, userId);
+            @PathVariable Long mediaId) {
 
-            MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(userId, mediaId);
+        Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        logger.debug("Pre-signed download URL request for mediaId: {}, userId: {}", mediaId, userId);
 
-            logger.debug("Pre-signed GET URL generated for mediaId: {}", mediaId);
-            return ResponseEntity.ok(new SuccessResponse<>(
-                    HttpStatus.OK,
-                    "Pre-signed download URL generated. URL expires in 15 minutes.",
-                    List.of(response)
-            ));
+        MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(userId, mediaId);
 
-        } catch (ServiceException e) {
-            logger.warn("Pre-signed URL generation failed for mediaId {}: {}", mediaId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            logger.error("Unexpected error generating pre-signed URL for mediaId: {}", mediaId, e);
-            throw new ServiceException("Failed to generate pre-signed URL", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        logger.debug("Pre-signed GET URL generated for mediaId: {}", mediaId);
+        return ResponseEntity.ok(new SuccessResponse<>(
+                HttpStatus.OK,
+                "Pre-signed download URL generated. URL expires in 15 minutes.",
+                List.of(response)));
     }
 }

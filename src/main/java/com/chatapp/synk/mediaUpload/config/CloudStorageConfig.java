@@ -16,7 +16,7 @@ public class CloudStorageConfig {
     @Bean
     @ConditionalOnProperty(name = "cloud.provider", havingValue = "aws", matchIfMissing = true)
     public CloudStorageService awsStorageService(S3Client s3Client, AppProperties appProperties) {
-        return new S3StorageService(s3Client, appProperties.getAwsS3BucketName());
+        return new S3StorageService(s3Client, appProperties.getAwsS3BucketName(), appProperties);
     }
 
     // @Bean

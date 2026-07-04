@@ -21,6 +21,11 @@ public class S3Config {
     }
 
     @Bean
+    // To create s3 client we need to provide region, access key and secret key.
+    // These values are fetched from AppProperties which reads them
+    // from application.properties file.
+    // The S3Client bean is then available for injection
+    // into other components that require S3 operations.
     public S3Client s3Client() {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(
                 appProperties.getAwsS3AccessKey(),
@@ -30,4 +35,5 @@ public class S3Config {
                 .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
                 .build();
     }
+
 }
