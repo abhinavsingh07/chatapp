@@ -1,18 +1,16 @@
 package com.chatapp.synk.mediaUpload.dto;
 
-import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
-
 public class MediaUploadCompleteResponse {
 
     private Long mediaId;
-    private MediaUploadStatus status;
+    private String status;
     private String message;
 
     // Constructors
     public MediaUploadCompleteResponse() {
     }
 
-    public MediaUploadCompleteResponse(Long mediaId, MediaUploadStatus status, String message) {
+    public MediaUploadCompleteResponse(Long mediaId, String status, String message) {
         this.mediaId = mediaId;
         this.status = status;
         this.message = message;
@@ -27,11 +25,11 @@ public class MediaUploadCompleteResponse {
         this.mediaId = mediaId;
     }
 
-    public MediaUploadStatus getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(MediaUploadStatus status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 

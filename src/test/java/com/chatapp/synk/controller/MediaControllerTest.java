@@ -63,7 +63,7 @@ class MediaControllerTest {
                 // Mock upload complete response
                 completeResponse = new MediaUploadCompleteResponse(
                                 1L,
-                                MediaUploadStatus.ACTIVE,
+                                MediaUploadStatus.ACTIVE.name(),
                                 "Upload completed successfully");
 
                 // Mock pre-signed download URL response
@@ -326,7 +326,7 @@ class MediaControllerTest {
                         assertNotNull(response.getBody().getData());
                         assertTrue(response.getBody().getData().get(0).getPresignedDownloadUrl()
                                         .contains("presigned-get-url"));
-                        assertEquals(900, response.getBody().getData().get(0).getUrlExpiresIn());
+                        assertEquals(900, response.getBody().getData().get(0).getDownloadUrlExpiresInMinutes());
                         verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(1L));
                 }
         }

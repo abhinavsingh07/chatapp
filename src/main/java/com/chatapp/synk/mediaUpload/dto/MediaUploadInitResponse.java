@@ -4,16 +4,16 @@ public class MediaUploadInitResponse {
 
     private Long mediaId;
     private String presignedUploadUrl;
-    private int uploadUrlExpiresIn; // in seconds
+    private int uploadUrlExpiresInMinutes; // in seconds
 
     // Constructors
     public MediaUploadInitResponse() {
     }
 
-    public MediaUploadInitResponse(Long mediaId, String presignedUploadUrl, int uploadUrlExpiresIn) {
+    public MediaUploadInitResponse(Long mediaId, String presignedUploadUrl, int uploadUrlExpiresInMinutes) {
         this.mediaId = mediaId;
         this.presignedUploadUrl = presignedUploadUrl;
-        this.uploadUrlExpiresIn = uploadUrlExpiresIn;
+        this.uploadUrlExpiresInMinutes = uploadUrlExpiresInMinutes;
     }
 
     // Getters and Setters
@@ -34,10 +34,10 @@ public class MediaUploadInitResponse {
     }
 
     public int getUploadUrlExpiresIn() {
-        return uploadUrlExpiresIn;
+        return uploadUrlExpiresInMinutes;
     }
 
-    public void setUploadUrlExpiresIn(int uploadUrlExpiresIn) {
-        this.uploadUrlExpiresIn = uploadUrlExpiresIn;
+    public void setUploadUrlExpiresIn(int uploadUrlExpiresInMinutes) {
+        this.uploadUrlExpiresInMinutes = uploadUrlExpiresInMinutes;
     }
 }

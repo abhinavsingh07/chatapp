@@ -15,6 +15,7 @@ import com.chatapp.synk.mediaUpload.util.S3KeyGenerator;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -171,7 +172,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         return new MediaUploadInitResponse(
                 savedMedia.getId(),
                 presignedUrl,
-                uploadUrlExpiryMinutes * 60 // Convert to seconds
+                uploadUrlExpiryMinutes // in minutes
         );
     }
 
@@ -214,12 +215,13 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         // 5. Return success response
         return new MediaUploadCompleteResponse(
                 mediaId,
-                MediaUploadStatus.ACTIVE,
+                MediaUploadStatus.ACTIVE.name(),
                 "Upload completed successfully");
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "mediaPreSignedUrlCache", key = "#userId + '-' + #mediaId", unless = "#result == null")
     public MediaPreSignedUrlResponse generatePreSignedGetUrl(Long userId, Long mediaId) {
         logger.info("Generating pre-signed GET URL for userId: {}, mediaId: {}", userId, mediaId);
 
@@ -245,7 +247,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         // 4. Return response
         return new MediaPreSignedUrlResponse(
                 presignedUrl,
-                downloadUrlExpiryMinutes * 60 // Convert to seconds
+                downloadUrlExpiryMinutes // in minutes
         );
     }
 }

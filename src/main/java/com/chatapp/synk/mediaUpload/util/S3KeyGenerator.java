@@ -10,6 +10,7 @@ public final class S3KeyGenerator {
      */
     public static String profilePictureKey(String userId, String mediaId, String originalFileName) {
         String extension = extractExtension(originalFileName);
+        //in s3 file structure comes as {bucket}/profile-pictures/{userId}/{mediaId}{extension}
         return "profile-pictures/%s/%s%s".formatted(userId, mediaId, extension);
     }
 
@@ -18,6 +19,7 @@ public final class S3KeyGenerator {
      */
     public static String chatMediaKey(String conversationId, String mediaId, String originalFileName) {
         String extension = extractExtension(originalFileName);
+        //in s3 file structure comes as {bucket}/chat-media/{conversationId}/{mediaId}{extension}
         return "chat-media/%s/%s%s".formatted(conversationId, mediaId, extension);
     }
 
@@ -26,6 +28,7 @@ public final class S3KeyGenerator {
      */
     public static String documentKey(String conversationId, String mediaId, String originalFileName) {
         String extension = extractExtension(originalFileName);
+        //in s3 file structure comes as {bucket}/documents/{conversationId}/{mediaId}{extension}
         return "documents/%s/%s%s".formatted(conversationId, mediaId, extension);
     }
 

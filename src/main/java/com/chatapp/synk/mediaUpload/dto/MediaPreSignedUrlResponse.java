@@ -3,15 +3,15 @@ package com.chatapp.synk.mediaUpload.dto;
 public class MediaPreSignedUrlResponse {
 
     private String presignedDownloadUrl;
-    private int urlExpiresIn; // in seconds
+    private int downloadUrlExpiresInMinutes; // in minutes
 
     // Constructors
     public MediaPreSignedUrlResponse() {
     }
 
-    public MediaPreSignedUrlResponse(String presignedDownloadUrl, int urlExpiresIn) {
+    public MediaPreSignedUrlResponse(String presignedDownloadUrl, int downloadUrlExpiresInMinutes) {
         this.presignedDownloadUrl = presignedDownloadUrl;
-        this.urlExpiresIn = urlExpiresIn;
+        this.downloadUrlExpiresInMinutes = downloadUrlExpiresInMinutes;
     }
 
     // Getters and Setters
@@ -23,11 +23,12 @@ public class MediaPreSignedUrlResponse {
         this.presignedDownloadUrl = presignedDownloadUrl;
     }
 
-    public int getUrlExpiresIn() {
-        return urlExpiresIn;
+    public int getDownloadUrlExpiresInMinutes() {
+        return downloadUrlExpiresInMinutes;
     }
 
-    public void setUrlExpiresIn(int urlExpiresIn) {
-        this.urlExpiresIn = urlExpiresIn;
-    }
+    public void setDownloadUrlExpiresInMinutes(int downloadUrlExpiresInMinutes) {
+        this.downloadUrlExpiresInMinutes = downloadUrlExpiresInMinutes;
+    }    
+
 }

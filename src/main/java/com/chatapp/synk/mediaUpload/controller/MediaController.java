@@ -25,7 +25,7 @@ import java.util.List;
  * - Downloading media (get pre-signed download URLs)
  */
 @RestController
-@RequestMapping("/media")
+@RequestMapping("/api/media")
 public class MediaController {
 
     private static final Logger logger = LoggerFactory.getLogger(MediaController.class);

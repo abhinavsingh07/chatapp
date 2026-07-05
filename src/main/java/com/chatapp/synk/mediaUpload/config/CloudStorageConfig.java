@@ -16,18 +16,20 @@ public class CloudStorageConfig {
     @Bean
     @ConditionalOnProperty(name = "cloud.provider", havingValue = "aws", matchIfMissing = true)
     public CloudStorageService awsStorageService(S3Client s3Client, AppProperties appProperties) {
-        return new S3StorageService(s3Client, appProperties.getAwsS3BucketName(), appProperties);
+        return new S3StorageService(s3Client, appProperties);
     }
 
     // @Bean
     // @ConditionalOnProperty(name = "cloud.provider", havingValue = "azure")
-    // public CloudStorageService azureStorageService(BlobClient blobClient, AppProperties appProperties) {
-    //    // return new AzureStorageService(blobClient);
+    // public CloudStorageService azureStorageService(BlobClient blobClient,
+    // AppProperties appProperties) {
+    // // return new AzureStorageService(blobClient);
     // }
 
     // @Bean
     // @ConditionalOnProperty(name = "cloud.provider", havingValue = "gcp")
-    // public CloudStorageService gcpStorageService(Storage storage, AppProperties appProperties) {
-    //     //return new GcpStorageService(storage, appProperties.getGcpBucketName());
+    // public CloudStorageService gcpStorageService(Storage storage, AppProperties
+    // appProperties) {
+    // //return new GcpStorageService(storage, appProperties.getGcpBucketName());
     // }
 }

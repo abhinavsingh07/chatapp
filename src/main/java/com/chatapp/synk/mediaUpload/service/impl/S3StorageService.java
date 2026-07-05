@@ -34,13 +34,14 @@ public class S3StorageService implements CloudStorageService {
     private static final Logger logger = LoggerFactory.getLogger(S3StorageService.class);
 
     private final S3Client s3Client;
+    
     private final String bucketName;
     private final S3Presigner s3Presigner;
     private final String region;
 
-    public S3StorageService(S3Client s3Client, String bucketName, AppProperties appProperties) {
+    public S3StorageService(S3Client s3Client, AppProperties appProperties) {
         this.s3Client = s3Client;
-        this.bucketName = bucketName;
+        this.bucketName = appProperties.getAwsS3BucketName();
         this.region = appProperties.getAwsS3Region();
         // Create S3Presigner once and reuse for all operations (thread-safe)
         this.s3Presigner = S3Presigner.builder()

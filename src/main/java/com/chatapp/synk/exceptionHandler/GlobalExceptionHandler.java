@@ -87,8 +87,6 @@ public class GlobalExceptionHandler {
                                 String duplicateValue = matcher.group(1);
                                 if (duplicateValue.contains("@")) {
                                         return "An account with this email address already exists";
-                                } else {
-                                        return "An account with this phone number already exists";
                                 }
                         }
                         return "An account with this information already exists";
