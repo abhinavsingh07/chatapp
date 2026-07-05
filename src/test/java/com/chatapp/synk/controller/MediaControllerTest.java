@@ -240,7 +240,7 @@ class MediaControllerTest {
                                         response.getBody().getMessage());
                         assertNotNull(response.getBody().getData());
                         assertEquals(1L, response.getBody().getData().get(0).getMediaId());
-                        assertEquals(MediaUploadStatus.ACTIVE, response.getBody().getData().get(0).getStatus());
+                        assertEquals(MediaUploadStatus.ACTIVE.name(), response.getBody().getData().get(0).getStatus());
                         verify(mediaUploadService, times(1)).completeUpload(anyLong(), eq(1L));
                 }
         }
