@@ -61,6 +61,13 @@ public class Media {
     @Column(name = "client_upload_id", length = 100, unique = true)
     private String clientUploadId;
 
+    @Column(name = "message_id")
+    private Long messageId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "message_id", insertable = false, updatable = false)
+    private Message message;
+
     // Constructors
     public Media() {
     }
@@ -188,5 +195,21 @@ public class Media {
 
     public void setClientUploadId(String clientUploadId) {
         this.clientUploadId = clientUploadId;
+    }
+
+    public Long getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(Long messageId) {
+        this.messageId = messageId;
+    }
+
+    public Message getMessage() {
+        return message;
+    }
+
+    public void setMessage(Message message) {
+        this.message = message;
     }
 }

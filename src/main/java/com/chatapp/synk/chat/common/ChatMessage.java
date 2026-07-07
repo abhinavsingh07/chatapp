@@ -9,18 +9,20 @@ public class ChatMessage {
     private String fromUserId;
     private String toUserId;
     private String body;
+    private String mediaIds;// for media attachments if multiple media it could be semicolon seprated.
+    private String fromUserName;
     private String sentAt;
     private String lastActiveTimeStamp;// only for presence it has utc time
-    private String fromUserName;
 
     public ChatMessage() {
     }
 
-    public ChatMessage(String conversationId, String fromUserId, String toUserId, String body) {
+    public ChatMessage(String conversationId, String fromUserId, String toUserId, String body, String mediaIds) {
         this.conversationId = conversationId;
         this.fromUserId = fromUserId;
         this.toUserId = toUserId;
         this.body = body;
+        this.mediaIds = mediaIds;
     }
 
     public String getFromUserId() {
@@ -86,4 +88,13 @@ public class ChatMessage {
     public void setFromUserName(String fromUserName) {
         this.fromUserName = fromUserName;
     }
+
+    public String getMediaIds() {
+        return mediaIds;
+    }
+
+    public void setMediaIds(String mediaIds) {
+        this.mediaIds = mediaIds;
+    }
+    
 }

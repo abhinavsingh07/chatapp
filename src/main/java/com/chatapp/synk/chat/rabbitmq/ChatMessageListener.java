@@ -30,7 +30,8 @@ public class ChatMessageListener {
     private final LocalWsSessionRegistry localWsSessionRegistry;
     private final RedisSessionStore redisSessionStore;
 
-    public ChatMessageListener(MessageService messageService, LocalWsSessionRegistry localWsSessionRegistry, RedisSessionStore redisSessionStore) {
+    public ChatMessageListener(MessageService messageService, LocalWsSessionRegistry localWsSessionRegistry, 
+            RedisSessionStore redisSessionStore) {
         this.messageService = messageService;
         this.localWsSessionRegistry = localWsSessionRegistry;
         this.redisSessionStore = redisSessionStore;
@@ -41,35 +42,42 @@ public class ChatMessageListener {
         logger.debug("[RabbitMQ] Received raw payload: {}", payload);
 
         try {
-            DeliveryEnvelope env = Json.mapper().readValue(payload, DeliveryEnvelope.class);
-            createInfoLog("[RabbitMQ] Converted payload into DeliveryEnvelope conversationId={} targetUserId={}", env.getMessage().getConversationId(), env.getTargetUserId(), env.getMessage());
+            DeliveryEnvelope deliveryEnvelope = Json.mapper().readValue(payload, DeliveryEnvelope.class);
+            createInfoLog("[RabbitMQ] Converted payload into DeliveryEnvelope conversationId={} targetUserId={}", deliveryEnvelope.getMessage().getConversationId(), deliveryEnvelope.getTargetUserId(), deliveryEnvelope.getMessage());
 
-            // Persist only chat messages
-            if (env.getMessage().getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
+            // Persist only chat messages with atomicity guarantee
+            if (deliveryEnvelope.getMessage().getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
                 MessageDTO messageDTO = new MessageDTO();
-                messageDTO.setSenderId(env.getMessage().getFromUserId());
-                messageDTO.setReceiverId(env.getMessage().getToUserId());
-                messageDTO.setContent(env.getMessage().getBody());
-                messageDTO.setConversationId(env.getMessage().getConversationId());
+                messageDTO.setSenderId(deliveryEnvelope.getMessage().getFromUserId());
+                messageDTO.setReceiverId(deliveryEnvelope.getMessage().getToUserId());
+                messageDTO.setContent(deliveryEnvelope.getMessage().getBody());
+                messageDTO.setConversationId(deliveryEnvelope.getMessage().getConversationId());
                 messageDTO.setMessageStatus(MessageStatus.SENT);
 
-                messageService.saveMessage(messageDTO);
-                logger.info("[DB] Persisted message conversationId={} senderId={} receiverId={}", env.getMessage().getConversationId(), env.getMessage().getFromUserId(), env.getMessage().getToUserId());
+                // Atomically save message and update media IDs (single transaction)
+                String mediaIdsStr = deliveryEnvelope.getMessage().getMediaIds();
+                logger.info("[DB] MEDIA STRR..**** {}", mediaIdsStr);
+                //db call
+                messageService.saveMessageWithMediaIds(messageDTO, mediaIdsStr, 
+                    Long.valueOf(deliveryEnvelope.getMessage().getFromUserId()));
+                logger.info("[DB] Persisted message with media associations conversationId={} senderId={} receiverId={}", 
+                    deliveryEnvelope.getMessage().getConversationId(), deliveryEnvelope.getMessage().getFromUserId(), 
+                    deliveryEnvelope.getMessage().getToUserId());
             }
 
             // Attempt delivery
-            if (!trySend(env.getTargetSessionId(), env)) {
-                logger.debug("[WS] SessionId={} not active, checking Redis...", env.getTargetSessionId());
+            if (!trySend(deliveryEnvelope.getTargetSessionId(), deliveryEnvelope)) {
+                logger.debug("[WS] SessionId={} not active, checking Redis...", deliveryEnvelope.getTargetSessionId());
 
-                String freshSessionId = redisSessionStore.getUserSessionId(env.getTargetUserId());
-                if (!trySend(freshSessionId, env)) {
-                    logger.warn("[WS] No active WebSocket session for userId={}", env.getTargetUserId());
+                String freshSessionId = redisSessionStore.getUserSessionId(deliveryEnvelope.getTargetUserId());
+                if (!trySend(freshSessionId, deliveryEnvelope)) {
+                    logger.warn("[WS] No active WebSocket session for userId={}", deliveryEnvelope.getTargetUserId());
                 }
             }
 
             // Acknowledge after DB + delivery attempt
             channel.basicAck(tag, false);
-            createInfoLog("[RabbitMQ] Message acked conversationId={} userId={}", env.getMessage().getConversationId(), env.getTargetUserId(), env.getMessage());
+            createInfoLog("[RabbitMQ] Message acked conversationId={} userId={}", deliveryEnvelope.getMessage().getConversationId(), deliveryEnvelope.getTargetUserId(), deliveryEnvelope.getMessage());
 
         } catch (Exception e) {
             logger.error("[RabbitMQ] Failed processing payload (hash={}): {}", payload.hashCode(), e.getMessage(), e);

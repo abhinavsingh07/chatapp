@@ -2,7 +2,7 @@ package com.chatapp.synk.mediaUpload.dto;
 
 public class MediaUploadCompleteResponse {
 
-    private Long mediaId;
+    private String mediaId;
     private String status;
     private String message;
 
@@ -10,18 +10,18 @@ public class MediaUploadCompleteResponse {
     public MediaUploadCompleteResponse() {
     }
 
-    public MediaUploadCompleteResponse(Long mediaId, String status, String message) {
+    public MediaUploadCompleteResponse(String mediaId, String status, String message) {
         this.mediaId = mediaId;
         this.status = status;
         this.message = message;
     }
 
     // Getters and Setters
-    public Long getMediaId() {
+    public String getMediaId() {
         return mediaId;
     }
 
-    public void setMediaId(Long mediaId) {
+    public void setMediaId(String mediaId) {
         this.mediaId = mediaId;
     }
 

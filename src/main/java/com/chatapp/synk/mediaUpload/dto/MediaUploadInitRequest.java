@@ -23,7 +23,7 @@ public class MediaUploadInitRequest {
     @NotBlank(message = "fileName is required")
     private String fileName;
 
-    private Long conversationId;
+    private String conversationId;
 
     private String clientUploadId; // Optional idempotency key for retry handling
 
@@ -81,11 +81,11 @@ public class MediaUploadInitRequest {
         this.fileName = fileName;
     }
 
-    public Long getConversationId() {
+    public String getConversationId() {
         return conversationId;
     }
 
-    public void setConversationId(Long conversationId) {
+    public void setConversationId(String conversationId) {
         this.conversationId = conversationId;
     }
 

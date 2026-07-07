@@ -6,6 +6,7 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.MessageRepository;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
+import com.chatapp.synk.mediaUpload.service.impl.MediaUploadServiceImpl;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import com.chatapp.synk.service.MessageService;
 import com.chatapp.synk.util.Mapper;
@@ -16,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,13 +26,15 @@ public class MessageServiceImpl implements MessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageServiceImpl.class);
     private final MessageRepository messageRepository;
-
     private final ConversationLastMessageService conversationLastMessageService;
+    private final MediaUploadServiceImpl mediaUploadService;
 
     public MessageServiceImpl(MessageRepository messageRepository,
-            ConversationLastMessageService conversationLastMessageService) {
+            ConversationLastMessageService conversationLastMessageService,
+            MediaUploadServiceImpl mediaUploadService) {
         this.messageRepository = messageRepository;
         this.conversationLastMessageService = conversationLastMessageService;
+        this.mediaUploadService = mediaUploadService;
     }
 
     @Override
@@ -109,5 +113,48 @@ public class MessageServiceImpl implements MessageService {
         // message.setIsRead(true);
         messageRepository.save(message);
         logger.info("Message marked as read. ID: {}", validId);
+    }
+
+    @Override
+    @Transactional
+    /**
+     * Atomically save a message and associate media files with it.
+     * Both operations are performed in a single transaction.
+     * calling from chatmessageListener to save message and update media ids in single transaction
+     *
+     * @param messageDTO The message to save
+     * @param mediaIdsStr Semicolon-separated media IDs (e.g., "1;2;3")
+     * @param fromUserId The user ID of the message sender (media owner)
+     */
+    public void saveMessageWithMediaIds(MessageDTO messageDTO, String mediaIdsStr, Long fromUserId) {
+        logger.info("Saving message with media associations for userId: {}", fromUserId);
+
+        // Save the message
+        MessageDTO savedMessage = saveMessage(messageDTO);
+        logger.debug("Message saved with ID: {}", savedMessage.getId());
+
+        // Update media with messageId if media IDs are present
+        if (mediaIdsStr != null && !mediaIdsStr.trim().isEmpty()) {
+            List<Long> mediaIds = Arrays.stream(mediaIdsStr.split(";"))
+                    .map(String::trim)
+                    .filter(id -> !id.isEmpty())
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+
+            if (!mediaIds.isEmpty() && savedMessage != null && savedMessage.getId() != null) {
+                for (Long mediaId : mediaIds) {
+                    try {
+                        mediaUploadService.updateMessageId(Long.valueOf(fromUserId) , mediaId, Long.valueOf(savedMessage.getId()));
+                        logger.debug("[Media] Updated mediaId={} with messageId={}", mediaId, savedMessage.getId());
+                    } catch (Exception e) {
+                        logger.warn("[Media] Failed to update messageId for mediaId={}: {}", mediaId, e.getMessage());
+                        // Re-throw to trigger transaction rollback
+                        throw new ServiceException("Failed to associate media with message: " + e.getMessage(),
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                }
+                logger.info("Successfully associated {} media files with messageId: {}", mediaIds.size(), savedMessage.getId());
+            }
+        }
     }
 }

@@ -196,7 +196,6 @@ public class InputValidationAndSanitizationService {
         sanitized.setSenderId(UserInputSanitizer.sanitizeId(dto.getSenderId()));
         sanitized.setReceiverId(UserInputSanitizer.sanitizeId(dto.getReceiverId()));
         sanitized.setContent(UserInputSanitizer.sanitizeText(dto.getContent()));  // special for text
-        sanitized.setMediaId(UserInputSanitizer.sanitizeId(dto.getMediaId()));
         sanitized.setMessageStatus(dto.getMessageStatus());//this is our enum value no need to sanitize
         return sanitized;
     }
@@ -207,7 +206,6 @@ public class InputValidationAndSanitizationService {
         checkFieldForPotentialSecurityRisks(dto.getConversationId(), 100, true, "conversationId");
         checkFieldForPotentialSecurityRisks(dto.getSenderId(), 100, true, "senderId");
         checkFieldForPotentialSecurityRisks(dto.getReceiverId(), 100, true, "receiverId");
-        checkFieldForPotentialSecurityRisks(dto.getMediaId(), 100, false, "mediaId");
 
         // Message content - could be optional but should be checked for XSS
         // allow special should be true as user can enter ?,@,#,$ any special character

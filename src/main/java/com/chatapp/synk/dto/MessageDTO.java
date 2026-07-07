@@ -2,6 +2,7 @@ package com.chatapp.synk.dto;
 
 import com.chatapp.synk.enums.MessageStatus;
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 
 public class MessageDTO {
 
@@ -14,10 +15,10 @@ public class MessageDTO {
     @NotBlank(message = "Receiver ID is required")
     private String receiverId;
     private String content;
-    private String mediaId;
     private MessageStatus messageStatus;
     private String sentAt;
     private String clientMessageId; // Unique identifier for idempotency
+    private List<MediaDTO> mediaList;
 
     public MessageDTO() {
 
@@ -72,12 +73,12 @@ public class MessageDTO {
         this.content = content;
     }
 
-    public String getMediaId() {
-        return mediaId;
+    public List<MediaDTO> getMediaList() {
+        return mediaList;
     }
 
-    public void setMediaId(String mediaId) {
-        this.mediaId = mediaId;
+    public void setMediaList(List<MediaDTO> mediaList) {
+        this.mediaList = mediaList;
     }
 
     public MessageStatus getMessageStatus() {

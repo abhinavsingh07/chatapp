@@ -2,26 +2,26 @@ package com.chatapp.synk.mediaUpload.dto;
 
 public class MediaUploadInitResponse {
 
-    private Long mediaId;
+    private String mediaId;
     private String presignedUploadUrl;
-    private int uploadUrlExpiresInMinutes; // in seconds
+    private int uploadUrlExpiresInMinutes; // in minutes
 
     // Constructors
     public MediaUploadInitResponse() {
     }
 
-    public MediaUploadInitResponse(Long mediaId, String presignedUploadUrl, int uploadUrlExpiresInMinutes) {
+    public MediaUploadInitResponse(String mediaId, String presignedUploadUrl, int uploadUrlExpiresInMinutes) {
         this.mediaId = mediaId;
         this.presignedUploadUrl = presignedUploadUrl;
         this.uploadUrlExpiresInMinutes = uploadUrlExpiresInMinutes;
     }
 
     // Getters and Setters
-    public Long getMediaId() {
+    public String getMediaId() {
         return mediaId;
     }
 
-    public void setMediaId(Long mediaId) {
+    public void setMediaId(String mediaId) {
         this.mediaId = mediaId;
     }
 
@@ -33,11 +33,11 @@ public class MediaUploadInitResponse {
         this.presignedUploadUrl = presignedUploadUrl;
     }
 
-    public int getUploadUrlExpiresIn() {
+    public int getUploadUrlExpiresInMinutes() {
         return uploadUrlExpiresInMinutes;
     }
 
-    public void setUploadUrlExpiresIn(int uploadUrlExpiresInMinutes) {
+    public void setUploadUrlExpiresInMinutes(int uploadUrlExpiresInMinutes) {
         this.uploadUrlExpiresInMinutes = uploadUrlExpiresInMinutes;
     }
 }

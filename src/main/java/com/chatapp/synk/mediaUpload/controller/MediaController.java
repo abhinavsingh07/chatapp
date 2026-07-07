@@ -74,11 +74,11 @@ public class MediaController {
      */
     @PostMapping("/upload-complete/{mediaId}")
     public ResponseEntity<SuccessResponse<MediaUploadCompleteResponse>> completeUpload(
-            @PathVariable Long mediaId) {
+            @PathVariable String mediaId) {
         Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
         logger.info("Upload complete request for mediaId: {}, userId: {}", mediaId, userId);
 
-        MediaUploadCompleteResponse response = mediaUploadService.completeUpload(userId, mediaId);
+        MediaUploadCompleteResponse response = mediaUploadService.completeUpload(userId, Long.valueOf(mediaId));
 
         logger.info("Media {} marked as ACTIVE", mediaId);
         return ResponseEntity.ok(new SuccessResponse<>(
@@ -99,12 +99,12 @@ public class MediaController {
      */
     @GetMapping("/pre-signed-url/{mediaId}")
     public ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> getPreSignedUrl(
-            @PathVariable Long mediaId) {
+            @PathVariable String mediaId) {
 
         Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
         logger.debug("Pre-signed download URL request for mediaId: {}, userId: {}", mediaId, userId);
 
-        MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(userId, mediaId);
+        MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(userId, Long.valueOf(mediaId));
 
         logger.debug("Pre-signed GET URL generated for mediaId: {}", mediaId);
         return ResponseEntity.ok(new SuccessResponse<>(

@@ -12,4 +12,14 @@ public interface MessageService {
     MessageDTO saveMessage(MessageDTO messageDTO);
 
     void markMessageAsRead(String messageId);
+
+    /**
+     * Atomically save a message and associate media files with it.
+     * Both operations are performed in a single transaction.
+     *
+     * @param messageDTO The message to save
+     * @param mediaIdsStr Semicolon-separated media IDs (e.g., "1;2;3")
+     * @param fromUserId The user ID of the message sender (media owner)
+     */
+    void saveMessageWithMediaIds(MessageDTO messageDTO, String mediaIdsStr, Long fromUserId);
 }

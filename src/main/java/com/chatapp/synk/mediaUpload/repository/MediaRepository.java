@@ -75,4 +75,21 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
     @Modifying
     @Transactional
     int deleteByStatusAndCreatedAtBefore(MediaUploadStatus status, Instant timestamp);
+
+    /**
+     * Update message ID for media records by media ID and owner user ID.
+     *
+     * @param id         Media ID
+     * @param ownerUserId User ID (owner)
+     * @param messageId   Message ID to associate with media
+     * @return Number of records updated
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Media m SET m.messageId = :messageId " +
+            "WHERE m.id = :id AND m.ownerUserId = :ownerUserId")
+    int updateMessageIdByIdAndOwnerUserId(
+            @Param("id") Long id,
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("messageId") Long messageId);
 }

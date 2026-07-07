@@ -89,7 +89,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
             // Verify user is a participant in the conversation
             boolean isParticipant = conversationParticipantRepository
-                    .findByConversationId(request.getConversationId())
+                    .findByConversationId(Long.valueOf(request.getConversationId()))
                     .stream()
                     .anyMatch(p -> p.getUserId().equals(userId));
 
@@ -130,7 +130,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         // 6. Create Media entity with UPLOAD_PENDING status
         Media media = new Media();
         media.setOwnerUserId(userId);
-        media.setConversationId(request.getConversationId());
+        media.setConversationId(request.getConversationId() != null ? Long.valueOf(request.getConversationId()) : null);
         media.setFileName(request.getFileName());
         media.setContentType(request.getContentType());
         media.setFileSize(request.getFileSize());
@@ -160,7 +160,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             }
         }
         savedMedia.setS3Key(finalS3Key);
-        savedMedia = mediaRepository.save(savedMedia);
         logger.debug("Updated Media s3Key: {}", finalS3Key);
 
         // 9. Generate pre-signed PUT URL for direct S3 upload
@@ -170,7 +169,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
         // 10. Return response
         return new MediaUploadInitResponse(
-                savedMedia.getId(),
+                savedMedia.getId().toString(),
                 presignedUrl,
                 uploadUrlExpiryMinutes // in minutes
         );
@@ -214,7 +213,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
         // 5. Return success response
         return new MediaUploadCompleteResponse(
-                mediaId,
+                mediaId.toString(),
                 MediaUploadStatus.ACTIVE.name(),
                 "Upload completed successfully");
     }
@@ -249,5 +248,39 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 presignedUrl,
                 downloadUrlExpiryMinutes // in minutes
         );
+    }
+
+    @Transactional
+    public void updateMessageId(Long userId, Long mediaId, Long messageId) {
+        logger.info("Updating messageId for mediaId: {}, userId: {}, messageId: {}", 
+                mediaId, userId, messageId);
+
+        // 1. Verify media exists and belongs to user
+        Media media = mediaRepository.findByIdAndOwnerUserId(mediaId, userId)
+                .orElseThrow(() -> {
+                    logger.warn("Media not found for mediaId: {}, userId: {}", mediaId, userId);
+                    return new ServiceException("Media not found", HttpStatus.NOT_FOUND);
+                });
+
+        // 2. Verify Media.status == ACTIVE (only update messageId for active media)
+        if (media.getStatus() != MediaUploadStatus.ACTIVE) {
+            logger.warn("Cannot update messageId for media {} with status {}, expected ACTIVE", 
+                    mediaId, media.getStatus());
+            throw new ServiceException("Can only associate active media with a message", 
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        // 3. Update messageId in database
+        int updated = mediaRepository.updateMessageIdByIdAndOwnerUserId(
+                mediaId, userId, messageId);
+
+        if (updated == 0) {
+            logger.warn("Failed to update messageId for media {}", mediaId);
+            throw new ServiceException("Failed to associate media with message", 
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        logger.info("Successfully updated messageId for mediaId: {} to messageId: {}", 
+                mediaId, messageId);
     }
 }

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "messages", schema = "chatapp")
@@ -33,9 +34,6 @@ public class Message {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "media_id", length = 50)
-    private Long mediaId;
-
     @Column(name = "message_status")
     @Enumerated(EnumType.STRING)
     private MessageStatus messageStatus = MessageStatus.SENT;
@@ -46,6 +44,8 @@ public class Message {
     @Column(name = "client_message_id", length = 100, unique = true)
     private String clientMessageId;
 
+    @OneToMany(mappedBy = "message", fetch = FetchType.EAGER)
+    private List<Media> mediaList;
 
     @PrePersist
     protected void onCreate() {
@@ -100,14 +100,6 @@ public class Message {
         this.content = content;
     }
 
-    public Long getMediaId() {
-        return mediaId;
-    }
-
-    public void setMediaId(Long mediaId) {
-        this.mediaId = mediaId;
-    }
-
     public MessageStatus getMessageStatus() {
         return messageStatus;
     }
@@ -130,5 +122,13 @@ public class Message {
 
     public void setClientMessageId(String clientMessageId) {
         this.clientMessageId = clientMessageId;
+    }
+
+    public List<Media> getMediaList() {
+        return mediaList;
+    }
+
+    public void setMediaList(List<Media> mediaList) {
+        this.mediaList = mediaList;
     }
 }

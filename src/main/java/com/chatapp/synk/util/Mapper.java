@@ -215,14 +215,19 @@ public class Mapper {
         if (message.getContent() != null) {
             dto.setContent(message.getContent());
         }
-        if (message.getMediaId() != null) {
-            dto.setMediaId(String.valueOf(message.getMediaId()));
-        }
         if (message.getMessageStatus() != null) {
             dto.setMessageStatus(message.getMessageStatus());
         }
         if (message.getSentAt() != null) {
             dto.setSentAt(message.getSentAt().toString());
+        }
+        if (message.getClientMessageId() != null) {
+            dto.setClientMessageId(message.getClientMessageId());
+        }
+        if (message.getMediaList() != null && !message.getMediaList().isEmpty()) {
+            dto.setMediaList(message.getMediaList().stream()
+                    .map(Mapper::mapToMediaDTO)
+                    .collect(java.util.stream.Collectors.toList()));
         }
         return dto;
     }
@@ -244,9 +249,6 @@ public class Mapper {
         }
         if (dto.getContent() != null) {
             message.setContent(dto.getContent());
-        }
-        if (dto.getMediaId() != null) {
-            message.setMediaId(Long.parseLong(dto.getMediaId()));
         }
         if (dto.getMessageStatus() != null) {
             message.setMessageStatus(dto.getMessageStatus());
@@ -331,6 +333,56 @@ public class Mapper {
         }
         if (refreshToken.getIpAddress() != null) {
             dto.setIpAddress(refreshToken.getIpAddress());
+        }
+        return dto;
+    }
+
+    public static MediaDTO mapToMediaDTO(Media media) {
+        if (media == null) {
+            return null;
+        }
+        MediaDTO dto = new MediaDTO();
+        if (media.getId() != 0) {
+            dto.setId(String.valueOf(media.getId()));
+        }
+        if (media.getOwnerUserId() != 0) {
+            dto.setOwnerUserId(String.valueOf(media.getOwnerUserId()));
+        }
+        if (media.getConversationId() != null && media.getConversationId() != 0) {
+            dto.setConversationId(String.valueOf(media.getConversationId()));
+        }
+        if (media.getS3Key() != null) {
+            dto.setS3Key(media.getS3Key());
+        }
+        if (media.getFileName() != null) {
+            dto.setFileName(media.getFileName());
+        }
+        if (media.getContentType() != null) {
+            dto.setContentType(media.getContentType());
+        }
+        if (media.getFileSize() != null) {
+            dto.setFileSize(media.getFileSize());
+        }
+        if (media.getMediaType() != null) {
+            dto.setMediaType(media.getMediaType());
+        }
+        if (media.getUsageType() != null) {
+            dto.setUsageType(media.getUsageType());
+        }
+        if (media.getStatus() != null) {
+            dto.setStatus(media.getStatus());
+        }
+        if (media.getCreatedAt() != null) {
+            dto.setCreatedAt(media.getCreatedAt().toString());
+        }
+        if (media.getUploadedAt() != null) {
+            dto.setUploadedAt(media.getUploadedAt().toString());
+        }
+        if (media.getClientUploadId() != null) {
+            dto.setClientUploadId(media.getClientUploadId());
+        }
+        if (media.getMessageId() != null && media.getMessageId() != 0) {
+            dto.setMessageId(String.valueOf(media.getMessageId()));
         }
         return dto;
     }
