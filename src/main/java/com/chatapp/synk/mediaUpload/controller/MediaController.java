@@ -112,4 +112,39 @@ public class MediaController {
                 "Pre-signed download URL generated. URL expires in 15 minutes.",
                 List.of(response)));
     }
+
+    /**
+     * Retrieve media from a conversation and generate pre-signed download URL.
+     * Allows conversation participants to view/download media shared in their conversation.
+     * Verifies that:
+     * - User is a participant in the conversation
+     * - Media is associated with the conversation
+     * - Media is in ACTIVE status
+     *
+     * @param mediaId ID of the media to download
+     * @param conversationId ID of the conversation
+     * @return SuccessResponse containing presigned download URL
+     * @throws ServiceException if media not found, not in conversation, or user not authorized
+     */
+    @GetMapping("/conversation/{conversationId}/media/{mediaId}")
+    public ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> getMediaFromConversation(
+            @PathVariable String conversationId,
+            @PathVariable String mediaId) {
+
+        Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        logger.info("Media download request from conversation: conversationId: {}, mediaId: {}, userId: {}",
+                conversationId, mediaId, userId);
+
+        MediaPreSignedUrlResponse response = mediaUploadService.getMediaFromConversation(
+                userId,
+                Long.valueOf(mediaId),
+                Long.valueOf(conversationId));
+
+        logger.debug("Pre-signed GET URL generated for mediaId: {} from conversationId: {}",
+                mediaId, conversationId);
+        return ResponseEntity.ok(new SuccessResponse<>(
+                HttpStatus.OK,
+                "Pre-signed download URL generated. URL expires in 15 minutes.",
+                List.of(response)));
+    }
 }

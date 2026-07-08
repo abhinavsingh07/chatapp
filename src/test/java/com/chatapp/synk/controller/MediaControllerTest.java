@@ -55,14 +55,14 @@ class MediaControllerTest {
 
                 // Mock upload init response
                 uploadInitResponse = new MediaUploadInitResponse(
-                                1L,
+                                "1",
                                 "https://s3.amazonaws.com/synk-media-bucket/presigned-put-url",
                                 600 // 10 minutes in seconds
                 );
 
                 // Mock upload complete response
                 completeResponse = new MediaUploadCompleteResponse(
-                                1L,
+                                "1",
                                 MediaUploadStatus.ACTIVE.name(),
                                 "Upload completed successfully");
 
@@ -96,10 +96,10 @@ class MediaControllerTest {
                         assertEquals("Upload initiated. Use the presigned URL to upload file directly to S3.",
                                         response.getBody().getMessage());
                         assertNotNull(response.getBody().getData());
-                        assertEquals(1L, response.getBody().getData().get(0).getMediaId());
+                        assertEquals("1", response.getBody().getData().get(0).getMediaId());
                         assertTrue(response.getBody().getData().get(0).getPresignedUploadUrl()
                                         .contains("presigned-put-url"));
-                        assertEquals(600, response.getBody().getData().get(0).getUploadUrlExpiresIn());
+                        assertEquals(600, response.getBody().getData().get(0).getUploadUrlExpiresInMinutes());
                         verify(mediaUploadService, times(1)).initiateUpload(anyLong(),
                                         any(MediaUploadInitRequest.class));
                 }
@@ -118,7 +118,7 @@ class MediaControllerTest {
                         chatMediaRequest.setContentType("video/mp4");
                         chatMediaRequest.setFileSize(20971520L); // 20 MB
                         chatMediaRequest.setFileName("video.mp4");
-                        chatMediaRequest.setConversationId(1L);
+                        chatMediaRequest.setConversationId("1L");
 
                         when(mediaUploadService.initiateUpload(anyLong(), any(MediaUploadInitRequest.class)))
                                         .thenReturn(uploadInitResponse);
@@ -203,7 +203,7 @@ class MediaControllerTest {
                         invalidRequest.setContentType("image/jpeg");
                         invalidRequest.setFileSize(5242880L);
                         invalidRequest.setFileName("profile.jpg");
-                        invalidRequest.setConversationId(1L); // Profile picture should NOT have conversationId
+                        invalidRequest.setConversationId("1L"); // Profile picture should NOT have conversationId
 
                         when(mediaUploadService.initiateUpload(anyLong(), any(MediaUploadInitRequest.class)))
                                         .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
@@ -230,7 +230,7 @@ class MediaControllerTest {
 
                         // Act
                         ResponseEntity<SuccessResponse<MediaUploadCompleteResponse>> response = mediaController
-                                        .completeUpload(1L);
+                                        .completeUpload("1");
 
                         // Assert
                         assertNotNull(response.getBody());
@@ -239,7 +239,7 @@ class MediaControllerTest {
                         assertEquals("Upload completed successfully. Media is now available for use.",
                                         response.getBody().getMessage());
                         assertNotNull(response.getBody().getData());
-                        assertEquals(1L, response.getBody().getData().get(0).getMediaId());
+                        assertEquals("1", response.getBody().getData().get(0).getMediaId());
                         assertEquals(MediaUploadStatus.ACTIVE.name(), response.getBody().getData().get(0).getStatus());
                         verify(mediaUploadService, times(1)).completeUpload(anyLong(), eq(1L));
                 }
@@ -259,7 +259,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.completeUpload(999L));
+                                        () -> mediaController.completeUpload("999"));
                         verify(mediaUploadService, times(1)).completeUpload(anyLong(), eq(999L));
                 }
         }
@@ -278,7 +278,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.completeUpload(1L));
+                                        () -> mediaController.completeUpload("1"));
                         verify(mediaUploadService, times(1)).completeUpload(anyLong(), eq(1L));
                 }
         }
@@ -297,7 +297,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.completeUpload(1L));
+                                        () -> mediaController.completeUpload("1"));
                 }
         }
 
@@ -315,7 +315,7 @@ class MediaControllerTest {
 
                         // Act
                         ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> response = mediaController
-                                        .getPreSignedUrl(1L);
+                                        .getPreSignedUrl("1");
 
                         // Assert
                         assertNotNull(response.getBody());
@@ -345,7 +345,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.getPreSignedUrl(999L));
+                                        () -> mediaController.getPreSignedUrl("999"));
                         verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(999L));
                 }
         }
@@ -364,7 +364,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.getPreSignedUrl(1L));
+                                        () -> mediaController.getPreSignedUrl("1"));
                 }
         }
 
@@ -382,7 +382,7 @@ class MediaControllerTest {
 
                         // Act & Assert
                         assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                        () -> mediaController.getPreSignedUrl(1L));
+                                        () -> mediaController.getPreSignedUrl("1"));
                 }
         }
 

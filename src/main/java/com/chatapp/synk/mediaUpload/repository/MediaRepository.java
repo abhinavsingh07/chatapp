@@ -77,6 +77,16 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
     int deleteByStatusAndCreatedAtBefore(MediaUploadStatus status, Instant timestamp);
 
     /**
+     * Find media by ID and conversation ID (for viewing media in conversations).
+     * Allows conversation participants to access media shared in their conversation.
+     *
+     * @param id Media ID
+     * @param conversationId Conversation ID
+     * @return Optional containing Media if found and associated with conversation
+     */
+    Optional<Media> findByIdAndConversationId(Long id, Long conversationId);
+
+    /**
      * Update message ID for media records by media ID and owner user ID.
      *
      * @param id         Media ID
