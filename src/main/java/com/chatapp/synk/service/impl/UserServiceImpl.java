@@ -123,10 +123,12 @@ public class UserServiceImpl implements UserService {
         userDTO.setPassword("********"); // Mask password
 
         // Fetch media by owner user ID and set mediaId if present
+        //sorting by id so that latest pic comes
         List<Media> mediaList = mediaRepository.findByOwnerUserId(Long.parseLong(validId));
         if (!mediaList.isEmpty()) {
             Long mediaId = mediaList.stream()
                     .filter(media -> media.getStatus() == MediaUploadStatus.ACTIVE && media.getUsageType() == MediaUsageType.PROFILE_PICTURE)
+                    .sorted(Comparator.comparingLong(Media::getId).reversed())
                     .map(Media::getId)
                     .findFirst()
                     .orElse(null);

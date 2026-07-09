@@ -15,6 +15,9 @@ import com.chatapp.synk.mediaUpload.util.S3KeyGenerator;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,17 +34,21 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         private final CloudStorageService awsStorageService;
         private final ConversationParticipantRepository conversationParticipantRepository;
         private final AppProperties appProperties;
+        private final CacheManager cacheManager;
 
         private int uploadUrlExpiryMinutes;
         private int downloadUrlExpiryMinutes;
 
         public MediaUploadServiceImpl(MediaRepository mediaRepository, CloudStorageService awsStorageService,
                         ConversationParticipantRepository conversationParticipantRepository,
-                        AppProperties appProperties) {
+                        AppProperties appProperties,
+                        CacheManager cacheManager) {
                 this.mediaRepository = mediaRepository;
                 this.awsStorageService = awsStorageService;
                 this.conversationParticipantRepository = conversationParticipantRepository;
                 this.appProperties = appProperties;
+                this.cacheManager = cacheManager;
+                //these are not beans.
                 this.uploadUrlExpiryMinutes = appProperties.getAwsS3UploadUrlExpiryMinutes();
                 this.downloadUrlExpiryMinutes = appProperties.getAwsS3DownloadUrlExpiryMinutes();
         }
@@ -199,6 +206,17 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 }
                 logger.info("Media {} marked as ACTIVE", mediaId);
 
+                // Evict userCache if profile picture upload completes
+                //so that last cache value evicted and next time user profile pic is fetched,
+                //  it will be fetched from DB and cache will be updated with new value
+                if (media.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
+                        Cache userCache = cacheManager.getCache("userCache");
+                        if (userCache != null) {
+                                userCache.evict(userId);
+                                logger.debug("Evicted userCache for userId: {} after profile picture upload", userId);
+                        }
+                }
+
                 // 5. Return success response
                 return new MediaUploadCompleteResponse(
                                 mediaId.toString(),
@@ -228,10 +246,10 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
                 // 3. Authorize access based on usageType
                 if (media.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
-                        if (!media.getId().equals(userId)) {
+                        if (!media.getOwnerUserId().equals(userId)) {
                                 logger.warn("Access denied for userId: {} on profile picture mediaId: {}", userId,
                                                 mediaId);
-                                throw new ServiceException("Media not found", HttpStatus.NOT_FOUND);
+                                throw new ServiceException("Media does not belong to user", HttpStatus.NOT_FOUND);
                         }
                 } else if (media.getUsageType() == MediaUsageType.CHAT_ATTACHMENT) {
                         boolean isParticipant = conversationParticipantRepository
