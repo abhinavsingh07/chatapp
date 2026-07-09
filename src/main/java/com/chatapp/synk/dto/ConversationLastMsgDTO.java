@@ -14,12 +14,13 @@ public class ConversationLastMsgDTO {
     // User fields
     private String userId;
     private String userName;
-    private String userProfilePictureUrl;
+    // private String userProfilePictureUrl;
+    private String mediaId;
 
     // private String updatedAt;
 
     public ConversationLastMsgDTO(Long messageId, Long conversationId, String content, Instant sentAt,
-            Long senderId, String conversationType, Long userId, String userName, String userProfilePictureUrl) {
+            Long senderId, String conversationType, Long userId, String userName, String mediaId) {
         this.messageId = String.valueOf(messageId);
         this.conversationId = String.valueOf(conversationId);
         this.content = content;
@@ -28,7 +29,7 @@ public class ConversationLastMsgDTO {
         this.conversationType = conversationType;
         this.userId = String.valueOf(userId);
         this.userName = userName;
-        this.userProfilePictureUrl = userProfilePictureUrl;
+        this.mediaId = mediaId;
     }
 
     public String getMessageId() {
@@ -95,12 +96,12 @@ public class ConversationLastMsgDTO {
         this.userName = userName;
     }
 
-    public String getUserProfilePictureUrl() {
-        return userProfilePictureUrl;
+    public String getMediaId() {
+        return mediaId;
     }
 
-    public void setUserProfilePictureUrl(String userProfilePictureUrl) {
-        this.userProfilePictureUrl = userProfilePictureUrl;
+    public void setMediaId(String mediaId) {
+        this.mediaId = mediaId;
     }
 
 }
