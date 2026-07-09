@@ -115,24 +115,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                         });
                 }
 
-                // 5. Generate S3 key using S3KeyGenerator
-                String mediaId = String.valueOf(System.nanoTime()); // Will be replaced by actual DB ID after save
-                String s3Key;
-                if (request.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
-                        s3Key = S3KeyGenerator.profilePictureKey(String.valueOf(userId), mediaId,
-                                        request.getFileName());
-                } else {
-                        // CHAT_ATTACHMENT - use chatMediaKey or documentKey based on mediaType
-                        if (request.getMediaType() == MediaType.DOCUMENT) {
-                                s3Key = S3KeyGenerator.documentKey(String.valueOf(request.getConversationId()),
-                                                mediaId, request.getFileName());
-                        } else {
-                                s3Key = S3KeyGenerator.chatMediaKey(String.valueOf(request.getConversationId()),
-                                                mediaId, request.getFileName());
-                        }
-                }
-
-                // 6. Create Media entity with UPLOAD_PENDING status
+                // 5. Create Media entity with UPLOAD_PENDING status
                 Media media = new Media();
                 media.setOwnerUserId(userId);
                 media.setConversationId(
@@ -147,33 +130,31 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 // s3Key will be updated after we get the actual ID
                 media.setS3Key("temp"); // Temporary, will update below
 
-                // 7. Save to DB to get the auto-generated ID
+                // 6. Save to DB to get the auto-generated ID
                 Media savedMedia = mediaRepository.save(media);
                 logger.debug("Created Media entity with ID: {}", savedMedia.getId());
 
-                // 8. Update S3 key with actual media ID
+                // 7. Update S3 key with actual media ID
                 String finalS3Key;
                 if (request.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
                         finalS3Key = S3KeyGenerator.profilePictureKey(String.valueOf(userId),
                                         String.valueOf(savedMedia.getId()), request.getFileName());
+                } else if (request.getUsageType() == MediaUsageType.CHAT_ATTACHMENT) {
+                        finalS3Key = S3KeyGenerator.chatMediaKey(String.valueOf(request.getConversationId()),
+                                        String.valueOf(savedMedia.getId()), request.getFileName());
                 } else {
-                        if (request.getMediaType() == MediaType.DOCUMENT) {
-                                finalS3Key = S3KeyGenerator.documentKey(String.valueOf(request.getConversationId()),
-                                                String.valueOf(savedMedia.getId()), request.getFileName());
-                        } else {
-                                finalS3Key = S3KeyGenerator.chatMediaKey(String.valueOf(request.getConversationId()),
-                                                String.valueOf(savedMedia.getId()), request.getFileName());
-                        }
+                        throw new ServiceException("Unsupported usage type", HttpStatus.BAD_REQUEST);
                 }
+                
                 savedMedia.setS3Key(finalS3Key);
                 logger.debug("Updated Media s3Key: {}", finalS3Key);
 
-                // 9. Generate pre-signed PUT URL for direct S3 upload
+                // 8. Generate pre-signed PUT URL for direct S3 upload
                 String presignedUrl = awsStorageService.generatePreSignedPutUrl(finalS3Key, uploadUrlExpiryMinutes);
                 logger.info("Generated pre-signed PUT URL for mediaId: {} (expires in {} minutes)",
                                 savedMedia.getId(), uploadUrlExpiryMinutes);
 
-                // 10. Return response
+                // 9. Return response
                 return new MediaUploadInitResponse(
                                 savedMedia.getId().toString(),
                                 presignedUrl,
@@ -247,8 +228,9 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
                 // 3. Authorize access based on usageType
                 if (media.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
-                        if (!media.getOwnerUserId().equals(userId)) {
-                                logger.warn("Access denied for userId: {} on profile picture mediaId: {}", userId, mediaId);
+                        if (!media.getId().equals(userId)) {
+                                logger.warn("Access denied for userId: {} on profile picture mediaId: {}", userId,
+                                                mediaId);
                                 throw new ServiceException("Media not found", HttpStatus.NOT_FOUND);
                         }
                 } else if (media.getUsageType() == MediaUsageType.CHAT_ATTACHMENT) {
@@ -277,8 +259,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                                 downloadUrlExpiryMinutes,
                                 media.getId().toString(),
                                 media.getMediaType().name(),
-                                media.getFileName()
-                );
+                                media.getFileName());
         }
 
         @Override

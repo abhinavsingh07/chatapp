@@ -25,6 +25,7 @@ public class UserDTO {
     private RoleName roleName;
     private String userlastSeen;
     private String identifierId;
+    private String mediaId;
 
     public UserDTO() {
     }
@@ -152,5 +153,13 @@ public class UserDTO {
     public void setIdentifierId(String identifierId) {
         this.identifierId = identifierId;
     }
-    
+
+    public String getMediaId() {
+        return mediaId;
+    }
+
+    public void setMediaId(String mediaId) {
+        this.mediaId = mediaId;
+    }
+
 }

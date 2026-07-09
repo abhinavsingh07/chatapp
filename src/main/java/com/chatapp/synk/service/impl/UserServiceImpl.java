@@ -4,11 +4,15 @@ import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.entity.Contact;
+import com.chatapp.synk.entity.Media;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.entity.UserRole;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.exceptionHandler.ServiceException;
+import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
+import com.chatapp.synk.mediaUpload.enums.MediaUsageType;
+import com.chatapp.synk.mediaUpload.repository.MediaRepository;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.repository.UserRoleRepository;
@@ -45,17 +49,20 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final ContactRepository contactRepository;
     private final UserRoleRepository userRoleRepository;
+    private final MediaRepository mediaRepository;
     private final RedisSessionStore redisSessionStore;
 
     public UserServiceImpl(UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ContactRepository contactRepository,
             UserRoleRepository userRoleRepository,
+            MediaRepository mediaRepository,
             RedisSessionStore redisSessionStore) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.contactRepository = contactRepository;
         this.userRoleRepository = userRoleRepository;
+        this.mediaRepository = mediaRepository;
         this.redisSessionStore = redisSessionStore;
 
     }
@@ -103,7 +110,9 @@ public class UserServiceImpl implements UserService {
         logger.debug("Fetching user by ID: {}", userId);
         String validId = InputSecurityUtils.secureId(userId);
 
-        Optional<UserDTO> result = userRepository.findById(Long.parseLong(validId)).map(Mapper::mapToUserDTO);
+        Optional<UserDTO> result = userRepository
+                .findById(Long.parseLong(validId))
+                .map(Mapper::mapToUserDTO);
 
         if (result.isEmpty()) {
             logger.warn("No user found with ID: {}", validId);
@@ -112,6 +121,19 @@ public class UserServiceImpl implements UserService {
 
         UserDTO userDTO = result.get();
         userDTO.setPassword("********"); // Mask password
+
+        // Fetch media by owner user ID and set mediaId if present
+        List<Media> mediaList = mediaRepository.findByOwnerUserId(Long.parseLong(validId));
+        if (!mediaList.isEmpty()) {
+            Long mediaId = mediaList.stream()
+                    .filter(media -> media.getStatus() == MediaUploadStatus.ACTIVE && media.getUsageType() == MediaUsageType.PROFILE_PICTURE)
+                    .map(Media::getId)
+                    .findFirst()
+                    .orElse(null);
+
+            userDTO.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
+        }
+
         return userDTO;
     }
 
@@ -278,7 +300,8 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
-    //we will update the contactUserId in contact table on user registration when registering user added to contact list by email buy other user. 
+    // we will update the contactUserId in contact table on user registration when
+    // registering user added to contact list by email buy other user.
     private void handleInvitedFlow(User savedUser) {
         if (logger.isDebugEnabled()) {
             logger.debug("Handling invited flow for user: {}", savedUser.getEmail());
@@ -296,6 +319,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private void updatePasswordIfRequested(User user, UserDTO userDTO) {
+        // update pasword only if old password, new password and confirm password are
+        // provided
         boolean passwordUpdateRequested = !StringUtil.isBlank(userDTO.getOldPassword())
                 || !StringUtil.isBlank(userDTO.getNewPassword())
                 || !StringUtil.isBlank(userDTO.getConfirmPassword());
