@@ -11,5 +11,5 @@ public interface ConversationParticipantService {
 
     List<ConversationParticipantDTO> getParticipantsByConversationId(String conversationId);
 
-    void deleteByConversationid(String id);
+    void deleteByConversationId(String conversationId);
 }

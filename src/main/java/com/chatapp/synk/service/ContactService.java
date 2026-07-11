@@ -8,7 +8,7 @@ import java.util.List;
 public interface ContactService {
     ContactDTO addContact(ContactDTO contactDTO);
 
-    public List<ContactUserDTO> getContacts(String userId);
+    List<ContactUserDTO> getContactsByUserId(String userId, String userDetailsRequired, String mediaDetailsRequired);
 
     void deleteContact(String contactId);
 }

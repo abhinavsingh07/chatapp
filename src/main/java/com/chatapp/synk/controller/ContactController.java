@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.ContactDTO;
 import com.chatapp.synk.dto.ContactUserDTO;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ContactService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -24,19 +25,25 @@ public class ContactController {
         this.contactService = contactService;
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<SuccessResponse<ContactUserDTO>> getContacts(@RequestParam(required = false) String userId) {
-        logger.info("Fetching contacts for userId: {}", userId);
-
-        List<ContactUserDTO> contactUserDTOList = contactService.getContacts(userId);
+    @GetMapping
+    public ResponseEntity<SuccessResponse<ContactUserDTO>> getContacts(
+            @RequestParam String userDetailsRequired,
+            @RequestParam String mediaDetailsRequired) {
+        // logged in user id for security check
+        String userId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        List<ContactUserDTO> contactUserDTOList = contactService.getContactsByUserId(userId, userDetailsRequired,
+                mediaDetailsRequired);
 
         if (contactUserDTOList.isEmpty()) {
             logger.warn("No contacts found for userId: {}", userId);
-            return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "No contacts found", Collections.emptyList()));
+            return ResponseEntity
+                    .ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "No contacts found", Collections.emptyList()));
         }
 
         logger.info("Found {} contacts for userId: {}", contactUserDTOList.size(), userId);
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Contacts fetched successfully", contactUserDTOList));
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Contacts retrieved successfully",
+                contactUserDTOList));
+
     }
 
     @PostMapping
@@ -44,7 +51,8 @@ public class ContactController {
         logger.debug("Request received to add contact for userId: {}", contactDTO.getUserId());
 
         ContactDTO savedContact = contactService.addContact(contactDTO);
-        String message = savedContact.getContactStatus() == ContactStatus.ADDED ? "Contact created successfully" : "Invitation sent successfully";
+        String message = savedContact.getContactStatus() == ContactStatus.ADDED ? "Contact created successfully"
+                : "Invitation sent successfully";
 
         logger.info("Contact action [{}] completed for userId: {}", message, contactDTO.getUserId());
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, message, List.of(savedContact)));

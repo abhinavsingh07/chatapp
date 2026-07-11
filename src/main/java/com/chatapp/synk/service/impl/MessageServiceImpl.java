@@ -1,21 +1,24 @@
 package com.chatapp.synk.service.impl;
 
 import com.chatapp.synk.dto.MessageDTO;
+import com.chatapp.synk.entity.ConversationParticipant;
 import com.chatapp.synk.entity.Message;
 import com.chatapp.synk.exceptionHandler.ServiceException;
+import com.chatapp.synk.repository.ConversationParticipantRepository;
 import com.chatapp.synk.repository.MessageRepository;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.mediaUpload.service.impl.MediaUploadServiceImpl;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import com.chatapp.synk.service.MessageService;
 import com.chatapp.synk.util.Mapper;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,32 +29,39 @@ public class MessageServiceImpl implements MessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageServiceImpl.class);
     private final MessageRepository messageRepository;
+    private final ConversationParticipantRepository participantRepository;
     private final ConversationLastMessageService conversationLastMessageService;
     private final MediaUploadServiceImpl mediaUploadService;
 
     public MessageServiceImpl(MessageRepository messageRepository,
+            ConversationParticipantRepository participantRepository,
             ConversationLastMessageService conversationLastMessageService,
             MediaUploadServiceImpl mediaUploadService) {
         this.messageRepository = messageRepository;
+        this.participantRepository = participantRepository;
         this.conversationLastMessageService = conversationLastMessageService;
         this.mediaUploadService = mediaUploadService;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MessageDTO> getMessagesByConversationId(String conversationId) {
-        String validId = InputSecurityUtils.secureId(conversationId);
-        return messageRepository.findByConversationIdOrderBySentAtAsc(Long.parseLong(validId))
-                .stream()
-                .map(Mapper::mapToMessageDTO)
-                .collect(Collectors.toList());
-    }
+        String validConvId = InputSecurityUtils.secureId(conversationId);
+        String loggedInUserId = InputSecurityUtils.secureId(SecurityUtil.getCurrentUserIdFromSecurityContext());
 
-    @Override
-    public List<MessageDTO> getUnreadMessagesForReceiver(String conversationId, String receiverId) {
-        String receiverValidId = InputSecurityUtils.secureId(receiverId);
-        String conversationValidId = InputSecurityUtils.secureId(conversationId);
-        return messageRepository
-                .findByConversationIdAndReceiverId(Long.parseLong(conversationValidId), Long.parseLong(receiverValidId))
+        // first check if the logged in user is a participant of the conversation
+        // security check
+        List<ConversationParticipant> participants = participantRepository
+                .findByConversationId(Long.parseLong(validConvId));
+        boolean isParticipant = participants.stream()
+                .anyMatch(participant -> participant.getUserId().equals(Long.parseLong(loggedInUserId)));
+
+        if (!isParticipant) {
+            logger.warn("User [{}] is not a participant of conversation [{}]", loggedInUserId, validConvId);
+            throw new ServiceException("Access denied: User is not a participant of this conversation");
+        }
+
+        return messageRepository.findByConversationIdOrderBySentAtAsc(Long.parseLong(validConvId))
                 .stream()
                 .map(Mapper::mapToMessageDTO)
                 .collect(Collectors.toList());
@@ -59,8 +69,54 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     @Transactional
-    public MessageDTO saveMessage(MessageDTO messageDTO) {
-        MessageDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(messageDTO);
+    /**
+     * Atomically save a message and associate media files with it.
+     * Both operations are performed in a single transaction.
+     * calling from chatmessageListener to save message and update media ids in
+     * single transaction
+     *
+     * @param messageDTO  The message to save
+     * @param mediaIdsStr Semicolon-separated media IDs (e.g., "1;2;3")
+     * @param fromUserId  The user ID of the message sender (media owner)
+     */
+    public void saveMessageWithMediaIds(MessageDTO messageDTO, String mediaIdsStr, Long fromUserId) {
+        logger.info("Saving message with media associations for userId: {}", fromUserId);
+        MessageDTO validMessageDTO = InputValidationAndSanitizationService.validateAndSanitize(messageDTO);
+        // Save the message
+        MessageDTO savedMessage = saveMessage(validMessageDTO);
+        logger.debug("Message saved with ID: {}", savedMessage.getId());
+
+        // Update media with messageId if media IDs are present
+        if (mediaIdsStr != null && !mediaIdsStr.trim().isEmpty()) {
+            List<Long> mediaIds = Arrays.stream(mediaIdsStr.split(";"))
+                    .map(String::trim)
+                    .filter(id -> !id.isEmpty())
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+
+            if (!mediaIds.isEmpty() && savedMessage != null && savedMessage.getId() != null) {
+                for (Long mediaId : mediaIds) {
+                    try {
+                        //stored mediaIds need to be updated with messageId.
+                        mediaUploadService.updateMessageId(Long.valueOf(fromUserId), mediaId,
+                                Long.valueOf(savedMessage.getId()));
+                        logger.debug("[Media] Updated mediaId={} with messageId={}", mediaId, savedMessage.getId());
+                    } catch (Exception e) {
+                        logger.warn("[Media] Failed to update messageId for mediaId={}: {}", mediaId, e.getMessage());
+                        // Re-throw to trigger transaction rollback
+                        throw new ServiceException("Failed to associate media with message: " + e.getMessage(),
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                }
+                logger.info("Successfully associated {} media files with messageId: {}", mediaIds.size(),
+                        savedMessage.getId());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public MessageDTO saveMessage(MessageDTO validDTO) {
 
         // Idempotency fast-path: client retrying the same message returns the
         // already-saved one
@@ -116,45 +172,14 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    @Transactional
-    /**
-     * Atomically save a message and associate media files with it.
-     * Both operations are performed in a single transaction.
-     * calling from chatmessageListener to save message and update media ids in single transaction
-     *
-     * @param messageDTO The message to save
-     * @param mediaIdsStr Semicolon-separated media IDs (e.g., "1;2;3")
-     * @param fromUserId The user ID of the message sender (media owner)
-     */
-    public void saveMessageWithMediaIds(MessageDTO messageDTO, String mediaIdsStr, Long fromUserId) {
-        logger.info("Saving message with media associations for userId: {}", fromUserId);
-
-        // Save the message
-        MessageDTO savedMessage = saveMessage(messageDTO);
-        logger.debug("Message saved with ID: {}", savedMessage.getId());
-
-        // Update media with messageId if media IDs are present
-        if (mediaIdsStr != null && !mediaIdsStr.trim().isEmpty()) {
-            List<Long> mediaIds = Arrays.stream(mediaIdsStr.split(";"))
-                    .map(String::trim)
-                    .filter(id -> !id.isEmpty())
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-
-            if (!mediaIds.isEmpty() && savedMessage != null && savedMessage.getId() != null) {
-                for (Long mediaId : mediaIds) {
-                    try {
-                        mediaUploadService.updateMessageId(Long.valueOf(fromUserId) , mediaId, Long.valueOf(savedMessage.getId()));
-                        logger.debug("[Media] Updated mediaId={} with messageId={}", mediaId, savedMessage.getId());
-                    } catch (Exception e) {
-                        logger.warn("[Media] Failed to update messageId for mediaId={}: {}", mediaId, e.getMessage());
-                        // Re-throw to trigger transaction rollback
-                        throw new ServiceException("Failed to associate media with message: " + e.getMessage(),
-                                HttpStatus.INTERNAL_SERVER_ERROR);
-                    }
-                }
-                logger.info("Successfully associated {} media files with messageId: {}", mediaIds.size(), savedMessage.getId());
-            }
-        }
+    public List<MessageDTO> getUnreadMessagesForReceiver(String conversationId, String receiverId) {
+        String receiverValidId = InputSecurityUtils.secureId(receiverId);
+        String conversationValidId = InputSecurityUtils.secureId(conversationId);
+        return messageRepository
+                .findByConversationIdAndReceiverId(Long.parseLong(conversationValidId), Long.parseLong(receiverValidId))
+                .stream()
+                .map(Mapper::mapToMessageDTO)
+                .collect(Collectors.toList());
     }
+
 }

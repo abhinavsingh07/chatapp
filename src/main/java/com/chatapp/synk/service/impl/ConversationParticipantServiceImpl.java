@@ -24,23 +24,26 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
 
     private static final Logger logger = LoggerFactory.getLogger(ConversationParticipantServiceImpl.class);
 
-    private final ConversationParticipantRepository repository;
+    private final ConversationParticipantRepository conversationParticipantRepository;
 
-    public ConversationParticipantServiceImpl(ConversationParticipantRepository repository) {
-        this.repository = repository;
+    public ConversationParticipantServiceImpl(ConversationParticipantRepository conversationParticipantRepository) {
+        this.conversationParticipantRepository = conversationParticipantRepository;
     }
 
     @Override
     @CachePut(value = "participantCache", key = "#result.id")
     public ConversationParticipantDTO addParticipant(ConversationParticipantDTO dto) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Adding participant to conversation {}", dto.getConversationId());
-        }
+        logger.debug("Adding participant to conversation {}", dto.getConversationId());
+        // validate dto and sanitize input
         ConversationParticipantDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
+        // map to entity
         ConversationParticipant entity = Mapper.mapToParticipantEntity(validDTO);
-        ConversationParticipant saved = repository.save(entity);
+        // save to db
+        ConversationParticipant saved = conversationParticipantRepository.save(entity);
 
-        logger.info("Participant added with ID: {}", saved.getId());
+        if (logger.isDebugEnabled()) {
+            logger.info("Participant added with ID: {}", saved.getId());
+        }
         return Mapper.mapToParticipantDTO(saved);
     }
 
@@ -51,7 +54,7 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
             logger.debug("Fetching participant by ID: {}", id);
         }
         String validId = InputSecurityUtils.secureId(id);
-        Optional<ConversationParticipantDTO> result = repository
+        Optional<ConversationParticipantDTO> result = conversationParticipantRepository
                 .findById(Long.parseLong(validId))
                 .map(Mapper::mapToParticipantDTO);
 
@@ -69,23 +72,23 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
             logger.debug("Fetching participants for conversation ID: {}", conversationId.trim());
         }
         String validId = InputSecurityUtils.secureId(conversationId);
-        List<ConversationParticipant> list = repository.findByConversationId(Long.parseLong(validId));
+        List<ConversationParticipant> list = conversationParticipantRepository.findByConversationId(Long.parseLong(validId));
         return list.stream().map(Mapper::mapToParticipantDTO).collect(Collectors.toList());
     }
 
     @Override
     @Caching(evict = {
-            @CacheEvict(value = "participantCache", key = "#id", beforeInvocation = true),
-            @CacheEvict(value = "participantListCache", key = "#id", beforeInvocation = true)
+            @CacheEvict(value = "participantCache", key = "#conversationId", beforeInvocation = true),
+            @CacheEvict(value = "participantListCache", key = "#conversationId", beforeInvocation = true)
     })
-    public void deleteByConversationid(String id) {
+    public void deleteByConversationId(String conversationId) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Removing all conversation participants with conversation ID: {}", id);
+            logger.debug("Removing all conversation participants with conversation ID: {}", conversationId);
         }
-        String validId = InputSecurityUtils.secureId(id);
-        List<ConversationParticipant> list = repository.findByConversationId(Long.parseLong(validId));
+        String validId = InputSecurityUtils.secureId(conversationId);
+        List<ConversationParticipant> list = conversationParticipantRepository.findByConversationId(Long.parseLong(validId));
         for (ConversationParticipant cp : list) {
-            repository.deleteById(cp.getId());
+            conversationParticipantRepository.deleteById(cp.getId());
         }
     }
 }

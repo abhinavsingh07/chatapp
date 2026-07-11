@@ -6,11 +6,17 @@ import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.dto.ContactDTO;
 import com.chatapp.synk.dto.ContactUserDTO;
+import com.chatapp.synk.dto.ConversationLastMsgDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.entity.Contact;
+import com.chatapp.synk.entity.Media;
+import com.chatapp.synk.entity.User;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.EmailStatus;
 import com.chatapp.synk.exceptionHandler.ServiceException;
+import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
+import com.chatapp.synk.mediaUpload.enums.MediaUsageType;
+import com.chatapp.synk.mediaUpload.repository.MediaRepository;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ContactService;
@@ -26,7 +32,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -37,74 +46,74 @@ public class ContactServiceImpl implements ContactService {
     private static final Logger logger = LoggerFactory.getLogger(ContactServiceImpl.class);
     private final ContactRepository contactRepository;
     private final UserService userService;
-    private final CacheManager cacheManager;
     private final EmailService emailService;
     private final ExecutorService taskExecutor;
 
-    public ContactServiceImpl(ContactRepository contactRepository, UserService userService, CacheManager cacheManager,
-            EmailService emailService, ExecutorService taskExecutor) {
+    public ContactServiceImpl(ContactRepository contactRepository, UserService userService, EmailService emailService,
+            ExecutorService taskExecutor) {
         this.contactRepository = contactRepository;
         this.userService = userService;
-        this.cacheManager = cacheManager;
         this.emailService = emailService;
         this.taskExecutor = taskExecutor;
     }
 
     @Override
-    @Cacheable(value = "contactListCache", key = "#userId != null && !#userId.isEmpty() ? #userId : 'ALL_CONTACTS'", unless = "#result == null || #result.isEmpty()")
-    public List<ContactUserDTO> getContacts(String userId) {
-        String validId = SecurityUtil.getCurrentUserIdFromSecurityContext();
-        // String validId = InputSecurityUtils.secureId(userId);
-        if (validId != null && !validId.isEmpty()) {
-            return contactRepository.findContactUserDetailsByUserId(Long.parseLong(validId.trim()));
-        } else {
-            return contactRepository.findAllContactsWithUserDetails();
-        } 
+    @Transactional(readOnly = true)
+    public List<ContactUserDTO> getContactsByUserId(String userId, String userDetailsRequired,
+            String mediaDetailsRequired) {
+        String validId = InputSecurityUtils.secureId(userId);
+        if (validId == null || validId.isEmpty()) {
+            return List.of();
+        }
+
+        List<Contact> contacts = contactRepository.findAllByUserId(Long.parseLong(validId.trim()));
+        boolean fetchUser = "true".equalsIgnoreCase(userDetailsRequired);
+        boolean fetchMedia = "true".equalsIgnoreCase(mediaDetailsRequired);
+
+        List<ContactUserDTO> result = new ArrayList<>();
+        for (Contact contact : contacts) {
+            ContactUserDTO dto = new ContactUserDTO();
+            dto.setContactId(String.valueOf(contact.getId()));
+            dto.setUserId(String.valueOf(contact.getUserId()));
+            dto.setContactStatus(contact.getContactStatus());
+            dto.setEmailStatus(contact.getEmailStatus());
+            dto.setContactEmail(contact.getEmail());
+            dto.setIdentifierId(contact.getIdentifierId());
+
+            if (contact.getContactUserId() != null) {
+                dto.setContactUserId(String.valueOf(contact.getContactUserId()));
+
+                if (fetchUser) {
+                    User user = contact.getContactUser();
+                    if (user != null) {
+                        dto.setName(user.getName());
+                        dto.setPhoneNumber(user.getPhoneNumber());
+                        dto.setEmail(user.getEmail());
+                        dto.setStatus(user.getStatus());
+                    }
+                }
+
+                if (fetchMedia) {
+                    List<Media> mediaList = contact.getContactUserMedia();
+                    if (mediaList != null && !mediaList.isEmpty()) {
+                        Long mediaId = mediaList.stream()
+                                .filter(m -> m.getStatus() == MediaUploadStatus.ACTIVE
+                                        && m.getUsageType() == MediaUsageType.PROFILE_PICTURE)
+                                .sorted(Comparator.comparingLong(Media::getId).reversed())
+                                .map(Media::getId)
+                                .findFirst()
+                                .orElse(null);
+                        dto.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
+                    }
+                }
+            }
+
+            result.add(dto);
+        }
+        return result;
     }
 
     @Override
-    @Caching(evict = { @CacheEvict(value = "contactCache", key = "#contactId", beforeInvocation = true) })
-    public void deleteContact(String contactId) {
-        String validId = InputSecurityUtils.secureId(contactId);
-        Optional<Contact> contactOpt = contactRepository.findById(Long.parseLong(validId));
-
-        if (contactOpt.isEmpty()) {
-            logger.warn("Delete failed - no contact found with ID: {}", contactId);
-            throw new ServiceException("Contact not found for given contact id", HttpStatus.NOT_FOUND);
-        }
-
-        Contact contact = contactOpt.get();
-        Long userId = contact.getUserId();
-        // Long contactUserId = contact.getContactUserId();
-
-        // delete from DB
-        contactRepository.delete(contact);
-
-        // Evict related user caches
-        Cache contactListCache = cacheManager.getCache("contactListCache");
-        if (contactListCache != null) {
-            contactListCache.evict(userId);
-            contactListCache.evict("ALL_CONTACTS");
-        }
-
-        // Evict mutual contact caches for both directions
-        // Cache mutualCache = cacheManager.getCache("mutualContacts");
-        // if (mutualCache != null) {
-        //     String keyAB = userId + "_" + contactUserId;
-        //     String keyBA = contactUserId + "_" + userId;
-        //     mutualCache.evict(keyAB);
-        //     mutualCache.evict(keyBA);
-        //     logger.debug("Evicted mutual contact cache entries: [{}] and [{}]", keyAB, keyBA);
-        // }
-
-        logger.info("Contact deleted successfully: {}", contactId);
-    }
-
-    @Override
-    @Caching(evict = {
-            @CacheEvict(value = "contactListCache", key = "#dto.userId", condition = "#dto != null", beforeInvocation = true),
-            @CacheEvict(value = "contactListCache", key = "'ALL_CONTACTS'", beforeInvocation = true) }, put = {
-                    @CachePut(value = "contactCache", key = "#result.id", unless = "#result == null") })
     public ContactDTO addContact(ContactDTO dto) {
         ContactDTO validDTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
         String userId = validDTO.getUserId();// userid is of who is adding contact
@@ -161,7 +170,8 @@ public class ContactServiceImpl implements ContactService {
         contactDTO.setEmail(email);
         ContactDTO savedContact = saveContact(contactDTO);
 
-        //spawning new thread to send email asynchronously to avoid blocking the main thread
+        // spawning new thread to send email asynchronously to avoid blocking the main
+        // thread
         CompletableFuture.runAsync(() -> {
             boolean sent = emailService.sendEmail(new EmailDTO(email, "You're invited to join ChatApp!",
                     "Hi there!\n\nYou've been invited to join ChatApp. "
@@ -206,4 +216,22 @@ public class ContactServiceImpl implements ContactService {
             throw new ServiceException("Failed to save contact", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Override
+    public void deleteContact(String contactId) {
+        String validContactId = InputSecurityUtils.secureId(contactId);
+        Optional<Contact> contactOpt = contactRepository.findById(Long.parseLong(validContactId));
+
+        if (contactOpt.isEmpty()) {
+            logger.warn("Delete failed - no contact found with ID: {}", validContactId);
+            throw new ServiceException("Contact not found for given contact id", HttpStatus.NOT_FOUND);
+        }
+
+        Contact contact = contactOpt.get();
+        // delete from DB
+        contactRepository.delete(contact);
+
+        logger.info("Contact deleted successfully: {}", validContactId);
+    }
+
 }

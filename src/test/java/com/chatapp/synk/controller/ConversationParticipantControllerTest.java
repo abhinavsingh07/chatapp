@@ -128,7 +128,7 @@ class ConversationParticipantControllerTest {
 
         // Assert
         assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
+        assertTrue(response.getStatusCode().is4xxClientError());
         assertEquals(HttpStatus.NOT_FOUND, response.getBody().getResponseCode());
         assertEquals("No participants found", response.getBody().getMessage());
         assertTrue(response.getBody().getData().isEmpty());
@@ -138,7 +138,7 @@ class ConversationParticipantControllerTest {
     @Test
     void testDelete_Success() {
         // Arrange
-        doNothing().when(participantService).deleteByConversationid("participant1");
+        doNothing().when(participantService).deleteByConversationId("participant1");
 
         // Act
         ResponseEntity<SuccessResponse<Void>> response =
@@ -148,8 +148,8 @@ class ConversationParticipantControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("Participant removed", response.getBody().getMessage());
+        assertEquals("Participants removed", response.getBody().getMessage());
         assertTrue(response.getBody().getData().isEmpty());
-        verify(participantService, times(1)).deleteByConversationid("participant1");
+        verify(participantService, times(1)).deleteByConversationId("participant1");
     }
 }

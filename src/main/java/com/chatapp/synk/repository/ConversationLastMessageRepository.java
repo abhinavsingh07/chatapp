@@ -14,6 +14,7 @@ import java.util.List;
 
 @Repository
 public interface ConversationLastMessageRepository extends JpaRepository<ConversationLastMessage, Long> {
+    
        @Modifying // tells Spring this query changes data
        @Transactional // ensures atomic commit/rollback
        @Query(value = "INSERT INTO conversation_last_message "

@@ -38,7 +38,10 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
         String safeContent = InputSecurityUtils.secureMessage(content);
         Instant sentAt = Instant.now();
         Instant updatedAt = Instant.now();
+
         logger.info("Upserting last message for conversationId={}, messageId={}", conversationValidId, messageValidId);
+
+       //db call to upsert last message
         conversationLastMessageRepository.upsertLastMessage(Long.parseLong(conversationValidId),
                 Long.parseLong(messageValidId), Long.parseLong(senderValidId),
                 safeContent, sentAt, updatedAt);
@@ -48,10 +51,10 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
     }
 
     @Override
-    public List<ConversationLastMsgDTO> findUserConversations(String loggedInUserId) {
-        String validUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+    public List<ConversationLastMsgDTO> findUserConversations(String userId) {
+        String validUserId = InputSecurityUtils.secureId(userId);
         logger.info("Fetching chat list for loggedInUserId={}", validUserId);
-        // String validUserId = InputSecurityUtils.secureId(loggedInUserId);
+        
         List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository
                 .findUserConversations(Long.parseLong(validUserId));
 

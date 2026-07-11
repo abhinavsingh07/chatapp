@@ -97,15 +97,14 @@ public class MediaController {
      * @return SuccessResponse containing presigned download URL
      * @throws ServiceException if media not found, not ACTIVE, or user unauthorized
      */
-    @GetMapping("/pre-signed-url/{userId}/{mediaId}")
+    @GetMapping("/pre-signed-url/{mediaId}")
     public ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> getPreSignedUrl(
-            @PathVariable String userId,
             @PathVariable String mediaId) {
 
-        // Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        Long userId = Long.parseLong(SecurityUtil.getCurrentUserIdFromSecurityContext());
         logger.debug("Pre-signed download URL request for mediaId: {}, userId: {}", mediaId, userId);
 
-        MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(Long.valueOf(userId), Long.valueOf(mediaId));
+        MediaPreSignedUrlResponse response = mediaUploadService.generatePreSignedGetUrl(userId, Long.valueOf(mediaId));
 
         logger.debug("Pre-signed GET URL generated for mediaId: {}", mediaId);
         return ResponseEntity.ok(new SuccessResponse<>(

@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Table(name = "conversation_participants", schema = "chatapp")
 public class ConversationParticipant {
     public static final String ALIAS_PARTICIPANT = "PART";
+    
     @Id
     @GenericGenerator(name = "snowflake_gen", strategy = "com.chatapp.synk.config.snowflakeConfig.SnowflakeIdentifierGenerator")
     @GeneratedValue(generator = "snowflake_gen")

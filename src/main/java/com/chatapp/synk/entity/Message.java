@@ -44,7 +44,9 @@ public class Message {
     @Column(name = "client_message_id", length = 100, unique = true)
     private String clientMessageId;
 
-    @OneToMany(mappedBy = "message", fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER)
+    //Media.message_id references CurrentEntity.id
+    @JoinColumn(name = "message_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<Media> mediaList;
 
     @PrePersist

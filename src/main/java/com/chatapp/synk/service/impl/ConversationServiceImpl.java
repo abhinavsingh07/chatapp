@@ -15,18 +15,15 @@ import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.RandomUUIDGenerater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class ConversationServiceImpl implements ConversationService {
@@ -42,58 +39,53 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    @Caching(put = { @CachePut(value = "conversationCache", key = "#result.id", unless = "#result == null") }, evict = {
-            @CacheEvict(value = "conversationCache", key = "'allConversations'", beforeInvocation = true) })
-    public ConversationDTO createConversation(ConversationDTO dto) {
-        ConversationDTO validTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
-        Conversation entity = Mapper.mapToConversationEntity(validTO);
-        Conversation saved = conversationRepository.save(entity);
-
-        logger.info("Conversation created with ID: {}", saved.getId());
-        return Mapper.mapToConversationDTO(saved);
-    }
-
-    @Override
-    @Cacheable(value = "conversationCache", key = "#id", unless = "#result == null")
+    @Transactional(readOnly = true)
     public ConversationDTO getConversationById(String id) {
-        String validId = InputSecurityUtils.secureId(id);
-        Optional<ConversationDTO> result = conversationRepository.findById(Long.parseLong(validId))
+        String loggedInUserId = InputSecurityUtils.secureId(SecurityUtil.getCurrentUserIdFromSecurityContext());
+        String validConvId = InputSecurityUtils.secureId(id);
+
+        // first check if the logged in user is a participant of the conversation
+        List<ConversationParticipant> participants = participantRepository
+                .findByConversationId(Long.parseLong(validConvId));
+        boolean isParticipant = participants.stream()
+                .anyMatch(participant -> participant.getUserId().equals(Long.parseLong(loggedInUserId)));
+
+        // security check: if the logged in user is not a participant of the
+        // conversation, throw an exception
+        if (!isParticipant) {
+            logger.warn("User [{}] is not a participant of conversation [{}]", loggedInUserId, validConvId);
+            throw new ServiceException("Access denied: User is not a participant of this conversation");
+        }
+
+        // query db
+        Optional<ConversationDTO> result = conversationRepository
+                .findById(Long.parseLong(validConvId))
                 .map(Mapper::mapToConversationDTO);
 
         if (result.isEmpty()) {
-            logger.warn("No conversation found with ID: {}", id);
+            logger.warn("No conversation found with ID: {}", validConvId);
             return null;
         }
         // Debug only when found (not spammy at scale)
         if (logger.isDebugEnabled()) {
-            logger.debug("Fetched conversation with ID: {}", id);
+            logger.debug("Fetched conversation with ID: {}", validConvId);
         }
         return result.get();
     }
 
     @Override
-    @Cacheable(value = "conversationListCache", key = "'allConversations'")
-    public List<ConversationDTO> findAll() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Fetching all conversations from DB");
-        }
-        return conversationRepository.findAll().stream().map(Mapper::mapToConversationDTO).collect(Collectors.toList());
-    }
-
-    @Override
     @Cacheable(value = "conversationIdLookupCache", key = "T(com.chatapp.synk.security.SecurityUtil).getCurrentUserIdFromSecurityContext() + '_' + #contactUserId", unless = "#result == null")
-    @Transactional
-    public String getOrCreateConversation(String loggedInUserId, String contactUserId) {
+    public String getOrCreateConversation(String userId, String contactUserId) {
 
-        String loggedInUserValidId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        String validUserId = InputSecurityUtils.secureId(userId);
         String contactUserValidId = InputSecurityUtils.secureId(contactUserId);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Get or create conversation request between [{}] and [{}]", loggedInUserValidId,
+            logger.debug("Get or create conversation request between [{}] and [{}]", validUserId,
                     contactUserValidId);
         }
 
-        if (loggedInUserValidId.equals(contactUserValidId)) {
+        if (userId.equals(contactUserValidId)) {
             throw new ServiceException("Cannot create conversation with yourself");
         }
 
@@ -101,7 +93,7 @@ public class ConversationServiceImpl implements ConversationService {
         // column with unique index. This ensures that only one conversation
         // exists between two users, even if multiple threads attempt to create it
         // simultaneously.
-        String key = buildPrivateChatKey(loggedInUserValidId, contactUserValidId);
+        String key = buildPrivateChatKey(validUserId, contactUserValidId);
 
         // Fast path: single indexed column lookup — no joins
         Optional<Conversation> existing = conversationRepository.findByPrivateChatKey(key);
@@ -122,11 +114,11 @@ public class ConversationServiceImpl implements ConversationService {
                     .toString();
             String participantIdentifierId2 = RandomUUIDGenerater.getId(ConversationParticipant.ALIAS_PARTICIPANT)
                     .toString();
-            //save convsersation participants db call
+            // save convsersation participants db call
             participantRepository.saveAll(List.of(
                     new ConversationParticipant(
                             participantIdentifierId1, conversationEntityCreated.getId(),
-                            Long.parseLong(loggedInUserValidId)),
+                            Long.parseLong(validUserId)),
                     new ConversationParticipant(
                             participantIdentifierId2,
                             conversationEntityCreated.getId(), Long.parseLong(contactUserValidId))));
@@ -147,5 +139,18 @@ public class ConversationServiceImpl implements ConversationService {
         return userId1.compareTo(userId2) <= 0
                 ? userId1 + ":" + userId2
                 : userId2 + ":" + userId1;
+    }
+
+    @Override
+    public ConversationDTO createConversation(ConversationDTO dto) {
+        // validate and sanitize dto
+        ConversationDTO validTO = InputValidationAndSanitizationService.validateAndSanitize(dto);
+        // convert to entity
+        Conversation entity = Mapper.mapToConversationEntity(validTO);
+        // db call to save the conversation
+        Conversation saved = conversationRepository.save(entity);
+
+        logger.info("Conversation created with ID: {}", saved.getId());
+        return Mapper.mapToConversationDTO(saved);
     }
 }

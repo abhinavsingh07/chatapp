@@ -1,7 +1,9 @@
 package com.chatapp.synk.mediaUpload.service.impl;
 
 import com.chatapp.synk.config.AppProperties;
+import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.entity.Media;
+import com.chatapp.synk.enums.UserStatus;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.mediaUpload.dto.*;
 import com.chatapp.synk.mediaUpload.enums.MediaType;
@@ -13,6 +15,9 @@ import com.chatapp.synk.mediaUpload.service.CloudStorageService;
 import com.chatapp.synk.mediaUpload.util.MediaValidationUtil;
 import com.chatapp.synk.mediaUpload.util.S3KeyGenerator;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
+import com.chatapp.synk.repository.UserRepository;
+import com.chatapp.synk.util.Mapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -24,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class MediaUploadServiceImpl implements MediaUploadService {
@@ -33,6 +39,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         private final MediaRepository mediaRepository;
         private final CloudStorageService awsStorageService;
         private final ConversationParticipantRepository conversationParticipantRepository;
+        private final UserRepository userRepository;
         private final AppProperties appProperties;
         private final CacheManager cacheManager;
 
@@ -42,13 +49,15 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         public MediaUploadServiceImpl(MediaRepository mediaRepository, CloudStorageService awsStorageService,
                         ConversationParticipantRepository conversationParticipantRepository,
                         AppProperties appProperties,
-                        CacheManager cacheManager) {
+                        CacheManager cacheManager,
+                        UserRepository userRepository) {
                 this.mediaRepository = mediaRepository;
                 this.awsStorageService = awsStorageService;
                 this.conversationParticipantRepository = conversationParticipantRepository;
+                this.userRepository = userRepository;
                 this.appProperties = appProperties;
                 this.cacheManager = cacheManager;
-                //these are not beans.
+                // these are not beans.
                 this.uploadUrlExpiryMinutes = appProperties.getAwsS3UploadUrlExpiryMinutes();
                 this.downloadUrlExpiryMinutes = appProperties.getAwsS3DownloadUrlExpiryMinutes();
         }
@@ -152,7 +161,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 } else {
                         throw new ServiceException("Unsupported usage type", HttpStatus.BAD_REQUEST);
                 }
-                
+
                 savedMedia.setS3Key(finalS3Key);
                 logger.debug("Updated Media s3Key: {}", finalS3Key);
 
@@ -207,13 +216,21 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 logger.info("Media {} marked as ACTIVE", mediaId);
 
                 // Evict userCache if profile picture upload completes
-                //so that last cache value evicted and next time user profile pic is fetched,
-                //  it will be fetched from DB and cache will be updated with new value
+                // so that last cache value evicted and next time user profile pic is fetched,
+                // it will be fetched from DB and cache will be updated with new value
                 if (media.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
                         Cache userCache = cacheManager.getCache("userCache");
                         if (userCache != null) {
                                 userCache.evict(userId);
                                 logger.debug("Evicted userCache for userId: {} after profile picture upload", userId);
+                        }
+                        // evict contactListCache as well, so that if the user is in other users'
+                        // contact lists, their profile picture will be updated
+                        Cache contactListCache = cacheManager.getCache("contactListCache");
+                        if (contactListCache != null) {
+                                contactListCache.evict(userId);
+                                logger.debug("Evicted contactListCache for userId: {} after profile picture upload",
+                                                userId);
                         }
                 }
 
@@ -234,7 +251,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 Media media = mediaRepository.findById(mediaId)
                                 .orElseThrow(() -> {
                                         logger.warn("Media not found for mediaId: {}", mediaId);
-                                        return new ServiceException("Media not found", HttpStatus.NOT_FOUND);
+                                        return new ServiceException("Media id not found", HttpStatus.NOT_FOUND);
                                 });
 
                 // 2. Verify Media.status == ACTIVE
@@ -246,10 +263,19 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
                 // 3. Authorize access based on usageType
                 if (media.getUsageType() == MediaUsageType.PROFILE_PICTURE) {
-                        if (!media.getOwnerUserId().equals(userId)) {
-                                logger.warn("Access denied for userId: {} on profile picture mediaId: {}", userId,
+                        // userid is security context userid if user is valid so we can show other user's profile picture.
+                        // user visisbility like nobody , contacts and everyone is (todo)
+                        Optional<UserDTO> result = userRepository
+                                        .findById(userId)
+                                        .filter(user -> user.getStatus().equals(UserStatus.ACTIVE))
+                                        .map(Mapper::mapToUserDTO);
+
+                        if (!result.isPresent()) {
+                                logger.warn("Access denied for userId: {} on profile picture mediaId: {}",
+                                                userId,
                                                 mediaId);
-                                throw new ServiceException("Media does not belong to user", HttpStatus.NOT_FOUND);
+                                throw new ServiceException("User not valid to view profile picture",
+                                                HttpStatus.NOT_FOUND);
                         }
                 } else if (media.getUsageType() == MediaUsageType.CHAT_ATTACHMENT) {
                         boolean isParticipant = conversationParticipantRepository

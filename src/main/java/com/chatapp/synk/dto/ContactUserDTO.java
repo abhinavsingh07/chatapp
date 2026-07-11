@@ -17,7 +17,8 @@ public class ContactUserDTO {
     private String name;
     private String phoneNumber;
     private String email;
-    private String profilePictureUrl;
+    // private String profilePictureUrl;
+    private String mediaId;
     private UserStatus status;
 
     // using JPQL query and normal object mapping in repository layer to set these
@@ -32,7 +33,7 @@ public class ContactUserDTO {
             String name,
             String phoneNumber,
             String email,
-            String profilePictureUrl,
+            String mediaId,
             UserStatus status) {
 
         this.contactId = String.valueOf(contactId);
@@ -45,7 +46,7 @@ public class ContactUserDTO {
         this.name = name;
         this.phoneNumber = phoneNumber;
         this.email = email;
-        this.profilePictureUrl = profilePictureUrl;
+        this.mediaId = mediaId;
         this.status = status;
 
     }
@@ -117,12 +118,12 @@ public class ContactUserDTO {
         this.email = email;
     }
 
-    public String getProfilePictureUrl() {
-        return profilePictureUrl;
+    public String getMediaId() {
+        return mediaId;
     }
 
-    public void setProfilePictureUrl(String profilePictureUrl) {
-        this.profilePictureUrl = profilePictureUrl;
+    public void setMediaId(String mediaId) {
+        this.mediaId = mediaId;
     }
 
     public UserStatus getStatus() {

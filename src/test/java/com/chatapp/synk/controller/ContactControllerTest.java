@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.ContactDTO;
 import com.chatapp.synk.dto.ContactUserDTO;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ContactService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,8 @@ class ContactControllerTest {
     private ContactDTO mockContactDTO;
     private ContactUserDTO mockContactUserDTO;
 
+    private static final String TEST_USER_ID = "user1";
+
     @BeforeEach
     void setUp() {
         mockContactDTO = new ContactDTO();
@@ -50,39 +53,47 @@ class ContactControllerTest {
 
     @Test
     void testGetContacts_WhenContactsExist() {
-        // Arrange
-        String userId = "user1";
-        when(contactService.getContacts(userId)).thenReturn(List.of(mockContactUserDTO));
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID);
+            // Arrange
+            String userId = TEST_USER_ID;
+            when(contactService.getContactsByUserId(userId, "false", "false")).thenReturn(List.of(mockContactUserDTO));
 
-        // Act
-        ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts(userId);
+            // Act
+            ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts("false", "false");
 
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("Contacts fetched successfully", response.getBody().getMessage());
-        assertEquals(1, response.getBody().getData().size());
-        assertEquals("Alice Johnson", response.getBody().getData().get(0).getName());
-        verify(contactService, times(1)).getContacts(userId);
+            // Assert
+            assertNotNull(response.getBody());
+            assertTrue(response.getStatusCode().is2xxSuccessful());
+            assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
+            assertEquals("Contacts retrieved successfully", response.getBody().getMessage());
+            assertEquals(1, response.getBody().getData().size());
+            assertEquals("Alice Johnson", response.getBody().getData().get(0).getName());
+            verify(contactService, times(1)).getContactsByUserId(userId, "false", "false");
+        }
     }
 
     @Test
     void testGetContacts_WhenNoContactsFound() {
-        // Arrange
-        String userId = "user1";
-        when(contactService.getContacts(userId)).thenReturn(Collections.emptyList());
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID);
+            // Arrange
+            String userId = TEST_USER_ID;
+            when(contactService.getContactsByUserId(userId, "false", "false")).thenReturn(Collections.emptyList());
 
-        // Act
-        ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts(userId);
+            // Act
+            ResponseEntity<SuccessResponse<ContactUserDTO>> response = contactController.getContacts("false", "false");
 
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(HttpStatus.NOT_FOUND, response.getBody().getResponseCode());
-        assertEquals("No contacts found", response.getBody().getMessage());
-        assertTrue(response.getBody().getData().isEmpty());
-        verify(contactService, times(1)).getContacts(userId);
+            // Assert
+            assertNotNull(response.getBody());
+            assertTrue(response.getStatusCode().is2xxSuccessful());
+            assertEquals(HttpStatus.NOT_FOUND, response.getBody().getResponseCode());
+            assertEquals("No contacts found", response.getBody().getMessage());
+            assertTrue(response.getBody().getData().isEmpty());
+            verify(contactService, times(1)).getContactsByUserId(userId, "false", "false");
+        }
     }
 
     @Test

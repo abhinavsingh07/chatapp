@@ -305,73 +305,86 @@ class MediaControllerTest {
 
         @Test
         void testGetPreSignedUrl_WithValidActiveMedia_Success() {
+                try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+                        mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                                        .thenReturn(TEST_USER_ID);
 
-                // Arrange
-                when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
-                                .thenReturn(preSignedUrlResponse);
+                        // Arrange
+                        when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
+                                        .thenReturn(preSignedUrlResponse);
 
-                // Act
-                ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> response = mediaController
-                                .getPreSignedUrl("2", "1");
+                        // Act
+                        ResponseEntity<SuccessResponse<MediaPreSignedUrlResponse>> response = mediaController
+                                        .getPreSignedUrl("1");
 
-                // Assert
-                assertNotNull(response.getBody());
-                assertTrue(response.getStatusCode().is2xxSuccessful());
-                assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-                assertEquals("Pre-signed download URL generated. URL expires in 15 minutes.",
-                                response.getBody().getMessage());
-                assertNotNull(response.getBody().getData());
-                assertTrue(response.getBody().getData().get(0).getPresignedDownloadUrl()
-                                .contains("presigned-get-url"));
-                assertEquals(900, response.getBody().getData().get(0).getDownloadUrlExpiresInMinutes());
-                verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(1L));
-
+                        // Assert
+                        assertNotNull(response.getBody());
+                        assertTrue(response.getStatusCode().is2xxSuccessful());
+                        assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
+                        assertEquals("Pre-signed download URL generated. URL expires in 15 minutes.",
+                                        response.getBody().getMessage());
+                        assertNotNull(response.getBody().getData());
+                        assertTrue(response.getBody().getData().get(0).getPresignedDownloadUrl()
+                                        .contains("presigned-get-url"));
+                        assertEquals(900, response.getBody().getData().get(0).getDownloadUrlExpiresInMinutes());
+                        verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(1L));
+                }
         }
 
         @Test
         void testGetPreSignedUrl_WithNonExistentMediaId_Failure() {
+                try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+                        mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                                        .thenReturn(TEST_USER_ID);
 
-                // Arrange
-                when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(999L)))
-                                .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
-                                                "Media not found",
-                                                org.springframework.http.HttpStatus.NOT_FOUND));
+                        // Arrange
+                        when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(999L)))
+                                        .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
+                                                        "Media not found",
+                                                        org.springframework.http.HttpStatus.NOT_FOUND));
 
-                // Act & Assert
-                assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                () -> mediaController.getPreSignedUrl("2", "999"));
-                verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(999L));
-
+                        // Act & Assert
+                        assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
+                                        () -> mediaController.getPreSignedUrl("999"));
+                        verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(999L));
+                }
         }
 
         @Test
         void testGetPreSignedUrl_WithPendingMedia_Failure() {
+                try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+                        mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                                        .thenReturn(TEST_USER_ID);
 
-                // Arrange
-                when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
-                                .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
-                                                "Media is not available yet. Upload may still be pending.",
-                                                org.springframework.http.HttpStatus.BAD_REQUEST));
+                        // Arrange
+                        when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
+                                        .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
+                                                        "Media is not available yet. Upload may still be pending.",
+                                                        org.springframework.http.HttpStatus.BAD_REQUEST));
 
-                // Act & Assert
-                assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                () -> mediaController.getPreSignedUrl("2", "1"));
-                verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(1L));
+                        // Act & Assert
+                        assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
+                                        () -> mediaController.getPreSignedUrl("1"));
+                        verify(mediaUploadService, times(1)).generatePreSignedGetUrl(anyLong(), eq(1L));
+                }
         }
 
         @Test
         void testGetPreSignedUrl_WithUnauthorizedUser_Failure() {
+                try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+                        mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                                        .thenReturn(TEST_USER_ID);
 
-                // Arrange
-                when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
-                                .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
-                                                "Unauthorized to access this media",
-                                                org.springframework.http.HttpStatus.FORBIDDEN));
+                        // Arrange
+                        when(mediaUploadService.generatePreSignedGetUrl(anyLong(), eq(1L)))
+                                        .thenThrow(new com.chatapp.synk.exceptionHandler.ServiceException(
+                                                        "Unauthorized to access this media",
+                                                        org.springframework.http.HttpStatus.FORBIDDEN));
 
-                // Act & Assert
-                assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
-                                () -> mediaController.getPreSignedUrl("2", "1"));
-
+                        // Act & Assert
+                        assertThrows(com.chatapp.synk.exceptionHandler.ServiceException.class,
+                                        () -> mediaController.getPreSignedUrl("1"));
+                }
         }
 
         // ==================== Idempotency Tests ====================

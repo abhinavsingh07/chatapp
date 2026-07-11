@@ -3,6 +3,7 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.ConversationDTO;
 import com.chatapp.synk.dto.ConversationLastMsgDTO;
 import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import com.chatapp.synk.service.ConversationService;
 import jakarta.validation.Valid;
@@ -23,16 +24,10 @@ public class ConversationController {
 
     private final ConversationLastMessageService conversationLastMessageService;
 
-    public ConversationController(ConversationService conversationService, ConversationLastMessageService conversationLastMessageService) {
+    public ConversationController(ConversationService conversationService,
+            ConversationLastMessageService conversationLastMessageService) {
         this.conversationService = conversationService;
         this.conversationLastMessageService = conversationLastMessageService;
-    }
-
-    @PostMapping
-    public ResponseEntity<SuccessResponse<ConversationDTO>> create(@Valid @RequestBody ConversationDTO dto) {
-        ConversationDTO created = conversationService.createConversation(dto);
-        logger.info("Conversation created successfully with ID: {}", created.getId());
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.CREATED, "Conversation created", List.of(created)));
     }
 
     @GetMapping("/{id}")
@@ -45,60 +40,59 @@ public class ConversationController {
             return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Conversation found", List.of(convo)));
         } else {
             logger.warn("Conversation not found with ID: {}", id);
-            return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "Conversation not found", Collections.emptyList()));
+            return ResponseEntity
+                    .ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "Conversation not found", Collections.emptyList()));
         }
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<SuccessResponse<ConversationDTO>> getAllConversations() {
-        logger.debug("Fetching all conversations");
-        List<ConversationDTO> conversations = conversationService.findAll();
-
-        if (conversations.isEmpty()) {
-            logger.warn("No conversations found");
-        } else {
-            logger.info("Retrieved {} conversations", conversations.size());
-        }
-
-        String msg = conversations.isEmpty() ? "No conversations available" : "Conversations retrieved";
-        HttpStatus code = conversations.isEmpty() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
-
-        return ResponseEntity.ok(new SuccessResponse<>(code, msg, conversations));
-    }
-
-    @PostMapping("/get-or-create/{fromUserId}/{toUserId}")
-    public ResponseEntity<SuccessResponse<String>> getOrCreateConversation(@PathVariable String fromUserId, @PathVariable String toUserId) {
-        logger.info("Request to get or create conversation between {} and {}", fromUserId, toUserId);
-
-        String conversationId = conversationService.getOrCreateConversation(fromUserId, toUserId);
+    @PostMapping("/get-or-create/{toUserId}")
+    public ResponseEntity<SuccessResponse<String>> getOrCreateConversation(@PathVariable String toUserId) {
+        logger.info("Request to get or create conversation between {} and {}",
+                SecurityUtil.getCurrentUserIdFromSecurityContext(), toUserId);
+        // logged in user id for security check
+        String loggedInUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        String conversationId = conversationService.getOrCreateConversation(loggedInUserId, toUserId);
 
         if (conversationId == null) {
-            logger.error("Failed to create or fetch conversation between {} and {}", fromUserId, toUserId);
+            logger.error("Failed to create or fetch conversation between {} and {}",
+                    loggedInUserId, toUserId);
             return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(new SuccessResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create or fetch conversation", null));
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new SuccessResponse<>(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Failed to create or fetch conversation", null));
         }
 
-        logger.info("Conversation {} found/created successfully between {} and {}", conversationId, fromUserId, toUserId);
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Conversation found/created successfully", List.of(conversationId)));
+        logger.info("Conversation {} found/created successfully between {} and {}", conversationId, loggedInUserId,
+                toUserId);
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Conversation found/created successfully",
+                List.of(conversationId)));
     }
 
-    @GetMapping("/{userId}/last-message")
-    public ResponseEntity<SuccessResponse<ConversationLastMsgDTO>> getUserConversationsLastMessage(@PathVariable String userId) {
-        logger.debug("Fetching chat list for userId={}", userId);
+    @GetMapping("/last-message")
+    public ResponseEntity<SuccessResponse<ConversationLastMsgDTO>> getUserConversationsLastMessage() {
+        logger.debug("Fetching last message chat list");
+         // logged in user id for security check
+        String loggedInUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
 
-        List<ConversationLastMsgDTO> chatList = conversationLastMessageService.findUserConversations(userId);
+        List<ConversationLastMsgDTO> chatList = conversationLastMessageService.findUserConversations(loggedInUserId);
 
         if (chatList.isEmpty()) {
-            logger.warn("No conversations found for userId={}", userId);
+            logger.warn("No conversations found for userId={}", loggedInUserId);
         } else {
-            logger.info("Retrieved {} conversations for userId={}", chatList.size(), userId);
+            logger.info("Retrieved {} conversations for userId={}", chatList.size(), loggedInUserId);
         }
 
         String msg = chatList.isEmpty() ? "No conversations available" : "Conversations retrieved successfully";
         HttpStatus code = chatList.isEmpty() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
 
         return ResponseEntity.ok(new SuccessResponse<>(code, msg, chatList));
+    }
+
+    @PostMapping
+    public ResponseEntity<SuccessResponse<ConversationDTO>> create(@Valid @RequestBody ConversationDTO dto) {
+        ConversationDTO created = conversationService.createConversation(dto);
+        logger.info("Conversation created successfully with ID: {}", created.getId());
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.CREATED, "Conversation created", List.of(created)));
     }
 
 }

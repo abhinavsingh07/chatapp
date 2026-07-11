@@ -30,14 +30,6 @@ public class MessageController {
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Messages fetched successfully", messages));
     }
 
-    @GetMapping("/unread/{conversationId}/{receiverId}")
-    public ResponseEntity<SuccessResponse<MessageDTO>> getUnreadMessages(@PathVariable("conversationId") String conversationId, @PathVariable("receiverId") String receiverId) {
-
-        logger.debug("Fetching unread messages for receiver: {} in conversation: {}", receiverId, conversationId);
-        List<MessageDTO> messages = messageService.getUnreadMessagesForReceiver(conversationId, receiverId);
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Unread messages fetched", messages));
-    }
-
     @PostMapping("/create")
     public ResponseEntity<SuccessResponse<MessageDTO>> saveMessage(@Valid @RequestBody MessageDTO messageDTO) {
         logger.info("New message send request for conversationId: {}", messageDTO.getConversationId());
@@ -50,6 +42,14 @@ public class MessageController {
         logger.debug("Marking message as read with ID: {}", id);
         messageService.markMessageAsRead(id);
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Message marked as read", Collections.emptyList()));
+    }
+
+      @GetMapping("/unread/{conversationId}/{receiverId}")
+    public ResponseEntity<SuccessResponse<MessageDTO>> getUnreadMessages(@PathVariable("conversationId") String conversationId, @PathVariable("receiverId") String receiverId) {
+
+        logger.debug("Fetching unread messages for receiver: {} in conversation: {}", receiverId, conversationId);
+        List<MessageDTO> messages = messageService.getUnreadMessagesForReceiver(conversationId, receiverId);
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Unread messages fetched", messages));
     }
 }
 

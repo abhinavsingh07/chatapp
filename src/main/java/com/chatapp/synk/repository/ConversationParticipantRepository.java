@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface ConversationParticipantRepository extends JpaRepository<ConversationParticipant, Long> {
+    // Find all participants for a given conversation ID
     List<ConversationParticipant> findByConversationId(Long conversationId);
 }

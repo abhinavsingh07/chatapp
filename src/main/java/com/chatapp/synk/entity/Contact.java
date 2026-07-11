@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "contacts", schema = "chatapp", uniqueConstraints = @UniqueConstraint(name = "uq_user_contact", columnNames = {
@@ -38,6 +40,16 @@ public class Contact {
 
     @Column(name = "email", length = 100)
     private String email;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    // User.id references CurrentEntity.contact_user_id
+    @JoinColumn(name = "id", referencedColumnName = "contact_user_id", insertable = false, updatable = false)
+    private User contactUser;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    //Media.owner_user_id references CurrentEntity.contact_user_id
+    @JoinColumn(name = "owner_user_id", referencedColumnName = "contact_user_id", insertable = false, updatable = false)
+    private List<Media> contactUserMedia = new ArrayList<>();
 
     public Contact() {
     }
@@ -109,5 +121,21 @@ public class Contact {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public User getContactUser() {
+        return contactUser;
+    }
+
+    public void setContactUser(User contactUser) {
+        this.contactUser = contactUser;
+    }
+
+    public List<Media> getContactUserMedia() {
+        return contactUserMedia;
+    }
+
+    public void setContactUserMedia(List<Media> contactUserMedia) {
+        this.contactUserMedia = contactUserMedia;
     }
 }

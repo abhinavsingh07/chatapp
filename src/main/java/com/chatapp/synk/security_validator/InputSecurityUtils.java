@@ -9,7 +9,7 @@ public class InputSecurityUtils {
      */
     public static String secureId(String id) {
         if (id == null) return null;
-        checkField(id, 100, true, "id");
+        checkField(id, 100, false, "id");
         if (!UserInputValidator.isValidId(id)) {
             throw new SecurityException("Invalid ID format");
         }

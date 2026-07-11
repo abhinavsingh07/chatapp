@@ -25,7 +25,8 @@ public class ConversationParticipantController {
     }
 
     @PostMapping
-    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> add(@Valid @RequestBody ConversationParticipantDTO dto) {
+    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> add(
+            @Valid @RequestBody ConversationParticipantDTO dto) {
         logger.info("Adding participant to conversation {}", dto.getConversationId());
         ConversationParticipantDTO added = participantService.addParticipant(dto);
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.CREATED, "Participant added", List.of(added)));
@@ -38,26 +39,32 @@ public class ConversationParticipantController {
             return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participant found", List.of(participant)));
         } else {
             logger.debug("Participant not found with ID: {}", id);
-            return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "Participant not found", Collections.emptyList()));
+            return ResponseEntity
+                    .ok(new SuccessResponse<>(HttpStatus.NOT_FOUND, "Participant not found", Collections.emptyList()));
         }
     }
 
-    @GetMapping("/conversation/{conversationId}")
-    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> getByConversation(@PathVariable String conversationId) {
-        List<ConversationParticipantDTO> participants = participantService.getParticipantsByConversationId(conversationId);
-        HttpStatus code = participants.isEmpty() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
-        String msg = participants.isEmpty() ? "No participants found" : "Participants retrieved";
+    @GetMapping("/{conversationId}")
+    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> getByConversation(
+            @PathVariable String conversationId) {
+
+        List<ConversationParticipantDTO> participants = participantService
+                .getParticipantsByConversationId(conversationId);
+
         if (participants.isEmpty()) {
             logger.debug("No participants found for conversation {}", conversationId);
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new SuccessResponse<>(HttpStatus.NOT_FOUND, "No participants found", participants));
         }
-        return ResponseEntity.ok(new SuccessResponse<>(code, msg, participants));
+
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participants retrieved", participants));
     }
 
-    @DeleteMapping("/conversation/{id}")
-    public ResponseEntity<SuccessResponse<Void>> delete(@PathVariable String id) {
-        logger.info("Removing participant with ID: {}", id);
-        participantService.deleteByConversationid(id);
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participant removed", Collections.emptyList()));
+    @DeleteMapping("/conversation/{conversationId}")
+    public ResponseEntity<SuccessResponse<Void>> delete(@PathVariable String conversationId) {
+        logger.info("Removing all participants for conversation ID: {}", conversationId);
+        participantService.deleteByConversationId(conversationId);
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participants removed", Collections.emptyList()));
     }
 }
-
