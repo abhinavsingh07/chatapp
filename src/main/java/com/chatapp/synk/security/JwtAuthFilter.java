@@ -36,23 +36,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.jwtAuthEntryPoint = jwtAuthEntryPoint;
     }
 
-    private static final List<String> EXCLUDED_URLS = List.of(
-            "/auth/authenticate",
-            "/auth/register",
-            "/auth/refresh",
-            "/auth/logout",
-            "/auth/forgot-password");
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
             String requestPath = request.getRequestURI();
-            for (String uri : EXCLUDED_URLS) {
-                if (requestPath.contains(uri)) {
-                    filterChain.doFilter(request, response);
-                    return; // Skip JWT authentication
-                }
+            // Use centralized constants via exact path matching (not .contains) to avoid
+            // overly-permissive matching like /anything/auth/login bypassing auth.
+            if (SecurityConstants.PUBLIC_AUTH_URLS.contains(requestPath)) {
+                filterChain.doFilter(request, response);
+                return; // Skip JWT authentication
             }
 
             final String authHeader = request.getHeader("Authorization");

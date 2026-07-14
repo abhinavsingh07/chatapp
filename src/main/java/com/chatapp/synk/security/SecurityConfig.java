@@ -44,17 +44,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers(
-                                        "/auth/authenticate",
-                                        "/auth/register",
-                                        "/auth/refresh",
-                                        "/auth/logout",
-                                        "/auth/forgot-password",
-                                        "/ws/chat",
-                                        "/v3/api-docs/**",
-                                        "/swagger-ui/**",
-                                        "/swagger-ui.html",
-                                        "/actuator/**").permitAll()
+                        auth.requestMatchers(SecurityConstants.PUBLIC_AUTH_URLS
+                                        .toArray(new String[0])).permitAll()
+                                .requestMatchers(SecurityConstants.PUBLIC_STATIC_RESOURCES).permitAll()
                         .anyRequest().hasRole("USER")) //No, .authenticated() is not needed because .hasRole("USER") already implies that the user must be authenticated.
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthEntryPoint))

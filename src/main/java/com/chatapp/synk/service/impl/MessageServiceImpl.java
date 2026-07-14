@@ -9,7 +9,7 @@ import com.chatapp.synk.repository.MessageRepository;
 import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
-import com.chatapp.synk.mediaUpload.service.impl.MediaUploadServiceImpl;
+import com.chatapp.synk.mediaUpload.service.MediaUploadService;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import com.chatapp.synk.service.MessageService;
 import com.chatapp.synk.util.Mapper;
@@ -31,12 +31,12 @@ public class MessageServiceImpl implements MessageService {
     private final MessageRepository messageRepository;
     private final ConversationParticipantRepository participantRepository;
     private final ConversationLastMessageService conversationLastMessageService;
-    private final MediaUploadServiceImpl mediaUploadService;
+    private final MediaUploadService mediaUploadService;
 
     public MessageServiceImpl(MessageRepository messageRepository,
             ConversationParticipantRepository participantRepository,
             ConversationLastMessageService conversationLastMessageService,
-            MediaUploadServiceImpl mediaUploadService) {
+            MediaUploadService mediaUploadService) {
         this.messageRepository = messageRepository;
         this.participantRepository = participantRepository;
         this.conversationLastMessageService = conversationLastMessageService;
@@ -98,7 +98,7 @@ public class MessageServiceImpl implements MessageService {
                 for (Long mediaId : mediaIds) {
                     try {
                         //stored mediaIds need to be updated with messageId.
-                        mediaUploadService.updateMessageId(Long.valueOf(fromUserId), mediaId,
+                        mediaUploadService.updateMessageId(fromUserId, mediaId,
                                 Long.valueOf(savedMessage.getId()));
                         logger.debug("[Media] Updated mediaId={} with messageId={}", mediaId, savedMessage.getId());
                     } catch (Exception e) {

@@ -200,12 +200,4 @@ public class Media {
     public void setMessageId(Long messageId) {
         this.messageId = messageId;
     }
-
-    public Message getMessage() {
-        return message;
-    }
-
-    public void setMessage(Message message) {
-        this.message = message;
-    }
 }

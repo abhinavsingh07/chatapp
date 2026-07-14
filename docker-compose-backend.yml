@@ -1,0 +1,71 @@
+version: "3.9"
+services:
+  chatbackend1:
+    build: . # Build the Docker image for this service from the Dockerfile in the current directory.
+             # no container_name (so scaling works)
+    expose:
+      - "8080" # makes port 8080 accessible only to other containers on the same Docker network.(like nginx)
+    #ports:
+    #  - "8080:8080"
+    volumes:
+    # Maps local directory ./chatbackend1-docker-logs to container directory /app/logs
+      - ./chatbackend1-docker-logs:/app/logs
+
+    environment: # these enviroment value injected to application-devdocker.properties varibale placeholders
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      JWT_SECRET: ${JWT_SECRET}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+      HIKARI_MAXIMUM_POOL_SIZE: ${HIKARI_MAXIMUM_POOL_SIZE}
+      HIKARI_MINIMUM_IDLE: ${HIKARI_MINIMUM_IDLE}
+      HIKARI_IDLE_TIMEOUT: ${HIKARI_IDLE_TIMEOUT}
+      HIKARI_CONNECTION_TIMEOUT: ${HIKARI_CONNECTION_TIMEOUT}
+      HIKARI_MAX_LIFETIME: ${HIKARI_MAX_LIFETIME}
+      HIKARI_POOL_NAME: ${HIKARI_POOL_NAME}
+
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      CLOUD_PROVIDER: ${CLOUD_PROVIDER}
+
+
+    networks:
+      - chat_backend_custom_network 
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"  # 1. Exposed port 443 for incoming HTTPS traffic
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # ./nginx.conf (The Source) /etc/nginx/nginx.conf (The Destination) ro (Read-Only Mode)
+      - ./nginx/cert:/etc/nginx/certs:ro            # 2. Mounted your Windows cert folder to the container in read-only mode
+      # - ./media:/usr/share/nginx/html/media       # media folder mount
+    depends_on:
+      - chatbackend1
+    # - chatbackend2
+    networks:
+      - chat_backend_custom_network
+
+networks:
+  chat_backend_custom_network:
+    driver: bridge

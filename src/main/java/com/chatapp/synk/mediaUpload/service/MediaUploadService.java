@@ -47,4 +47,16 @@ public interface MediaUploadService {
     MediaPreSignedUrlResponse generatePreSignedGetUrl(Long userId, Long mediaId);
 
     public MediaPreSignedUrlResponse getMediaFromConversation(Long userId, Long mediaId, Long conversationId);
+
+    /**
+     * Associate a media record with a message after the message is saved.
+     * Verifies media exists, belongs to the user, and is ACTIVE before updating.
+     *
+     * @param userId    Owner of the media
+     * @param mediaId   ID of the media record
+     * @param messageId ID of the message to associate
+     * @throws com.chatapp.synk.exceptionHandler.ServiceException if media not found,
+     *                                                            not ACTIVE, or update fails
+     */
+    void updateMessageId(Long userId, Long mediaId, Long messageId);
 }

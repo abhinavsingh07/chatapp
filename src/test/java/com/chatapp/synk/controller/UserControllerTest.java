@@ -3,6 +3,7 @@ package com.chatapp.synk.controller;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.response.SuccessResponse;
+import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,8 @@ class UserControllerTest {
 
     private UserDTO mockUser;
     private UserStatusDTO mockUserStatus;
+
+    private static final String TEST_USER_ID = "12345";
 
     @BeforeEach
     void setUp() {
@@ -115,74 +118,86 @@ class UserControllerTest {
 
     @Test
     void testUpdateUser_Success() {
-        // Arrange
-        UserDTO updatedUser = new UserDTO();
-        updatedUser.setId("1");
-        updatedUser.setName("Updated Name");
-        updatedUser.setEmail("updated@example.com");
-        updatedUser.setPhoneNumber("9999999999");
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID);
+            // Arrange
+            UserDTO updatedUser = new UserDTO();
+            updatedUser.setId("12345");
+            updatedUser.setName("Updated Name");
+            updatedUser.setEmail("updated@example.com");
+            updatedUser.setPhoneNumber("9999999999");
 
-        when(userService.updateUser("1", mockUser)).thenReturn(updatedUser);
+            when(userService.updateUser("12345", mockUser)).thenReturn(updatedUser);
 
-        // Act
-        ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("1", mockUser);
+            // Act
+            ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("12345", mockUser);
 
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("User updated successfully", response.getBody().getMessage());
-        assertEquals(1, response.getBody().getData().size());
-        assertEquals("Updated Name", response.getBody().getData().get(0).getName());
-        assertEquals("updated@example.com", response.getBody().getData().get(0).getEmail());
-        verify(userService, times(1)).updateUser("1", mockUser);
+            // Assert
+            assertNotNull(response.getBody());
+            assertTrue(response.getStatusCode().is2xxSuccessful());
+            assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
+            assertEquals("User updated successfully", response.getBody().getMessage());
+            assertEquals(1, response.getBody().getData().size());
+            assertEquals("Updated Name", response.getBody().getData().get(0).getName());
+            assertEquals("updated@example.com", response.getBody().getData().get(0).getEmail());
+            verify(userService, times(1)).updateUser("12345", mockUser);
+        }
     }
 
     @Test
     void testUpdateUser_WithPasswordChange_Success() {
-        // Arrange
-        UserDTO passwordChangeRequest = new UserDTO();
-        passwordChangeRequest.setOldPassword("OldPassword1");
-        passwordChangeRequest.setNewPassword("NewPassword1");
-        passwordChangeRequest.setConfirmPassword("NewPassword1");
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID);
+            // Arrange
+            UserDTO passwordChangeRequest = new UserDTO();
+            passwordChangeRequest.setOldPassword("OldPassword1");
+            passwordChangeRequest.setNewPassword("NewPassword1");
+            passwordChangeRequest.setConfirmPassword("NewPassword1");
 
-        UserDTO updatedUser = new UserDTO();
-        updatedUser.setId("1");
-        updatedUser.setName("John Doe");
-        updatedUser.setEmail("john@example.com");
-        updatedUser.setPhoneNumber("9999999999");
-        updatedUser.setPassword("********");
+            UserDTO updatedUser = new UserDTO();
+            updatedUser.setId("12345");
+            updatedUser.setName("John Doe");
+            updatedUser.setEmail("john@example.com");
+            updatedUser.setPhoneNumber("9999999999");
+            updatedUser.setPassword("********");
 
-        when(userService.updateUser("1", passwordChangeRequest)).thenReturn(updatedUser);
+            when(userService.updateUser("12345", passwordChangeRequest)).thenReturn(updatedUser);
 
-        // Act
-        ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("1", passwordChangeRequest);
+            // Act
+            ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("12345", passwordChangeRequest);
 
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("User updated successfully", response.getBody().getMessage());
-        assertEquals(1, response.getBody().getData().size());
-        assertEquals("********", response.getBody().getData().get(0).getPassword());
-        verify(userService, times(1)).updateUser("1", passwordChangeRequest);
+            // Assert
+            assertNotNull(response.getBody());
+            assertTrue(response.getStatusCode().is2xxSuccessful());
+            assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
+            assertEquals("User updated successfully", response.getBody().getMessage());
+            assertEquals(1, response.getBody().getData().size());
+            assertEquals("********", response.getBody().getData().get(0).getPassword());
+            verify(userService, times(1)).updateUser("12345", passwordChangeRequest);
+        }
     }
 
     @Test
     void testDeleteUser_Success() {
-        // Arrange
-        doNothing().when(userService).deleteUser("1");
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID);
+            // Arrange
+            doNothing().when(userService).deleteUser("12345");
 
-        // Act
-        ResponseEntity<SuccessResponse<Void>> response = userController.deleteUser("1");
+            // Act
+            ResponseEntity<SuccessResponse<Void>> response = userController.deleteUser("12345");
 
-        // Assert
-        assertNotNull(response.getBody());
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("User deleted successfully", response.getBody().getMessage());
-        assertTrue(response.getBody().getData().isEmpty());
-        verify(userService, times(1)).deleteUser("1");
+            // Assert
+            assertNotNull(response.getBody());
+            assertTrue(response.getStatusCode().is2xxSuccessful());
+            assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
+            assertEquals("User deleted successfully", response.getBody().getMessage());
+            assertTrue(response.getBody().getData().isEmpty());
+            verify(userService, times(1)).deleteUser("12345");
+        }
     }
 
     @Test

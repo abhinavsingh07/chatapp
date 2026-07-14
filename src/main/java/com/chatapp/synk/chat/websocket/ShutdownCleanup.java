@@ -26,8 +26,9 @@ public class ShutdownCleanup {
         logger.info("Shutdown initiated. Cleaning up {} sessions from Redis.", localRegistry.entries().size());
 
         for (Map.Entry<String, String> e : localRegistry.entries()) {
-            String sessionId = e.getKey();
-            String userId = e.getValue();
+            // wsSessionToUser maps userId -> sessionId, so key=userId, value=sessionId
+            String userId = e.getKey();
+            String sessionId = e.getValue();
 
             try {
                 sessionStore.deleteUserSession(userId);

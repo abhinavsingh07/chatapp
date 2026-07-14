@@ -1,0 +1,112 @@
+version: "3.9"
+services:
+
+  ## Monitoring setup
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - chat_backend_custom_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000" # Opens Grafana on port 3000
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin #  Sets the initial login password
+    networks:
+      - chat_backend_custom_network
+    depends_on:
+      - prometheus
+
+
+  # Databse    
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_ROOT_USER}", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    networks:
+      - chat_backend_custom_network
+
+  # cache    
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - chat_backend_custom_network
+  
+  # Promethus exporter for redis
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis_exporter
+    ports:
+      - "9121:9121"
+    environment:
+      # Points directly to your Redis container using your environment file variables
+      - REDIS_ADDR=${REDIS_HOST}:${REDIS_PORT}
+      # If your Redis instance uses a password, uncomment the line below:
+      # - REDIS_PASSWORD=${REDIS_PASSWORD} 
+    depends_on:
+      - prometheus # Ensures Prometheus network layers are ready
+    networks:
+      - chat_backend_custom_network
+
+  # Message Broker    
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    environment: 
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      # Enables the built-in Prometheus metrics engine safely alongside the server process
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_prometheus return_per_object_metrics true"
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+    networks:
+      - chat_backend_custom_network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  chat_backend_custom_network:
+    driver: bridge

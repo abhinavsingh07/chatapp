@@ -54,6 +54,14 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<SuccessResponse<UserDTO>> updateUser(@PathVariable String id, @RequestBody UserDTO userDTO) {
+        // Ownership check: authenticated user can only update their own profile.
+        String loggedInUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        if (!id.equals(loggedInUserId)) {
+            logger.warn("User [{}] attempted to update profile of user [{}]", loggedInUserId, id);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new SuccessResponse<>(HttpStatus.FORBIDDEN, "Access denied: you can only update your own profile", Collections.emptyList()));
+        }
+
         UserDTO updatedUser = userService.updateUser(id, userDTO);
         return ResponseEntity
                 .ok(new SuccessResponse<>(HttpStatus.OK, "User updated successfully", List.of(updatedUser)));
@@ -61,6 +69,14 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<SuccessResponse<Void>> deleteUser(@PathVariable String id) {
+        // Ownership check: authenticated user can only delete their own account.
+        String loggedInUserId = SecurityUtil.getCurrentUserIdFromSecurityContext();
+        if (!id.equals(loggedInUserId)) {
+            logger.warn("User [{}] attempted to delete account of user [{}]", loggedInUserId, id);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new SuccessResponse<>(HttpStatus.FORBIDDEN, "Access denied: you can only delete your own account", Collections.emptyList()));
+        }
+
         userService.deleteUser(id);
         return ResponseEntity
                 .ok(new SuccessResponse<>(HttpStatus.OK, "User deleted successfully", Collections.emptyList()));

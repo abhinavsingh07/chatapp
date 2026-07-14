@@ -3,51 +3,44 @@ package com.chatapp.synk.exceptionHandler;
 import org.springframework.http.HttpStatus;
 
 public class ServiceException extends RuntimeException {
-    private String message;
 
-    private HttpStatus status;
+    private final HttpStatus status;
 
     /**
-     * Constructs a new runtime exception with the specified detail message.
-     * The cause is not initialized, and may subsequently be initialized by a
-     * call to {@link #initCause}.
+     * Constructs a new service exception with a default 500 status.
      *
-     * @param message the detail message. The detail message is saved for
-     *                later retrieval by the {@link #getMessage()} method.
+     * @param message the detail message
      */
     public ServiceException(String message) {
         super(message);
+        this.status = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     /**
-     * Constructs a new runtime exception with the specified detail message and
-     * cause.  <p>Note that the detail message associated with
-     * {@code cause} is <i>not</i> automatically incorporated in
-     * this runtime exception's detail message.
+     * Constructs a new service exception with a cause and default 500 status.
      *
-     * @param message the detail message (which is saved for later retrieval
-     *                by the {@link #getMessage()} method).
-     * @param cause   the cause (which is saved for later retrieval by the
-     *                {@link #getCause()} method).  (A <tt>null</tt> value is
-     *                permitted, and indicates that the cause is nonexistent or
-     *                unknown.)
-     * @since 1.4
+     * @param message the detail message
+     * @param cause   the underlying cause
      */
     public ServiceException(String message, Throwable cause) {
         super(message, cause);
+        this.status = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     /**
-     * Constructs a new runtime exception with the specified detail message and http status code
-     * @param message the detail message (which is saved for later retrieval)
+     * Constructs a new service exception with an explicit HTTP status.
+     *
+     * @param message the detail message
      * @param status  the HTTP status code associated with this exception
      */
-
     public ServiceException(String message, HttpStatus status) {
         super(message);
         this.status = status;
     }
 
+    /**
+     * Returns the HTTP status associated with this exception, never null.
+     */
     public HttpStatus getStatus() {
         return status;
     }

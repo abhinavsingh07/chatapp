@@ -96,13 +96,13 @@ public class GlobalExceptionHandler {
 
         @ExceptionHandler(Exception.class) // catches Runtime Exception as well
         public ResponseEntity<ErrorResponse<Void>> handleOtherExceptions(Exception ex) {
-                logger.error("Exception occured: {} stack trace: {}", ex.getMessage(), ex);
+                logger.error("Unexpected exception: {}", ex.getMessage(), ex);
 
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(new ErrorResponse<Void>(
                                                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                                                 HttpStatus.INTERNAL_SERVER_ERROR,
-                                                ex.getMessage()));
+                                                "An internal error occurred. Please try again later."));
         }
 
         @ExceptionHandler(MethodArgumentNotValidException.class)

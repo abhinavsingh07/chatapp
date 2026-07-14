@@ -43,7 +43,7 @@ public class Contact {
 
     @ManyToOne(fetch = FetchType.LAZY)
     // User.id references CurrentEntity.contact_user_id
-    @JoinColumn(name = "id", referencedColumnName = "contact_user_id", insertable = false, updatable = false)
+    @JoinColumn(name = "contact_user_id", referencedColumnName = "id", insertable = false, updatable = false)
     private User contactUser;
 
     @OneToMany(fetch = FetchType.LAZY)
