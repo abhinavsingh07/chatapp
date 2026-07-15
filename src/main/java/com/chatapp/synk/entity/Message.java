@@ -44,7 +44,7 @@ public class Message {
     @Column(name = "client_message_id", length = 100, unique = true)
     private String clientMessageId;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     //Media.message_id references CurrentEntity.id
     @JoinColumn(name = "message_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<Media> mediaList;

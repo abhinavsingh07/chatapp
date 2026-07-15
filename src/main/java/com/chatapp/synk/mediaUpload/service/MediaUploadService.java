@@ -5,6 +5,8 @@ import com.chatapp.synk.mediaUpload.dto.MediaUploadInitResponse;
 import com.chatapp.synk.mediaUpload.dto.MediaUploadCompleteResponse;
 import com.chatapp.synk.mediaUpload.dto.MediaPreSignedUrlResponse;
 
+import java.util.List;
+
 public interface MediaUploadService {
 
     /**
@@ -59,4 +61,14 @@ public interface MediaUploadService {
      *                                                            not ACTIVE, or update fails
      */
     void updateMessageId(Long userId, Long mediaId, Long messageId);
+
+    /**
+     * Batch version of {@link #updateMessageId} — associates multiple media
+     * records with a message in a single UPDATE query.
+     *
+     * @param userId    Owner of the media
+     * @param mediaIds  List of media record IDs
+     * @param messageId ID of the message to associate
+     */
+    void updateMessageIds(Long userId, List<Long> mediaIds, Long messageId);
 }

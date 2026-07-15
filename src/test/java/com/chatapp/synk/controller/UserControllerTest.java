@@ -201,6 +201,40 @@ class UserControllerTest {
     }
 
     @Test
+    void testUpdateUser_WhenIdsDontMatch_ReturnsForbidden() {
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID); // logged in as "12345"
+
+            // Act — trying to update user "99999"
+            ResponseEntity<SuccessResponse<UserDTO>> response = userController.updateUser("99999", mockUser);
+
+            // Assert
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+            assertEquals(HttpStatus.FORBIDDEN, response.getBody().getResponseCode());
+            assertTrue(response.getBody().getMessage().contains("Access denied"));
+            verify(userService, never()).updateUser(any(), any());
+        }
+    }
+
+    @Test
+    void testDeleteUser_WhenIdsDontMatch_ReturnsForbidden() {
+        try (var mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
+            mockedSecurityUtil.when(SecurityUtil::getCurrentUserIdFromSecurityContext)
+                    .thenReturn(TEST_USER_ID); // logged in as "12345"
+
+            // Act — trying to delete user "99999"
+            ResponseEntity<SuccessResponse<Void>> response = userController.deleteUser("99999");
+
+            // Assert
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+            assertEquals(HttpStatus.FORBIDDEN, response.getBody().getResponseCode());
+            assertTrue(response.getBody().getMessage().contains("Access denied"));
+            verify(userService, never()).deleteUser(any());
+        }
+    }
+
+    @Test
     void testGetLastActiveUserStatus_WhenStatusExists() {
         // Arrange
         when(userService.getLastActiveUserStatus("1")).thenReturn(List.of(mockUserStatus));

@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -63,9 +64,11 @@ public class MediaCleanupService {
 
             logger.info("Found {} expired UPLOAD_PENDING media records", expiredMedia.size());
 
-            // Process each expired media
+            // Process each expired media — S3 deletes are individual (external API),
+            // DB deletes are batched into a single query
             int successCount = 0;
             int failureCount = 0;
+            List<Media> recordsToDelete = new ArrayList<>();
 
             for (Media media : expiredMedia) {
                 try {
@@ -77,8 +80,8 @@ public class MediaCleanupService {
                         logger.warn("Cloud storage object not found (may already be deleted): {}", media.getS3Key());
                     }
 
-                    // Delete media record from database
-                    mediaRepository.deleteById(media.getId());
+                    // Collect for batch DB delete
+                    recordsToDelete.add(media);
                     logger.info("Cleaned up media ID: {} (userId: {}, s3Key: {})",
                             media.getId(), media.getOwnerUserId(), media.getS3Key());
                     successCount++;
@@ -89,6 +92,11 @@ public class MediaCleanupService {
                     failureCount++;
                     // Continue processing other records even if one fails
                 }
+            }
+
+            // Batch DB delete — single query instead of N individual DELETE calls
+            if (!recordsToDelete.isEmpty()) {
+                mediaRepository.deleteAllInBatch(recordsToDelete);
             }
 
             logger.info("Cleanup completed: {} successful, {} failed out of {} media records",

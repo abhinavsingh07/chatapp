@@ -4,14 +4,11 @@ import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.entity.Contact;
-import com.chatapp.synk.entity.Media;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.entity.UserRole;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.RoleName;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
-import com.chatapp.synk.mediaUpload.enums.MediaUsageType;
 import com.chatapp.synk.mediaUpload.repository.MediaRepository;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.repository.UserRepository;
@@ -122,19 +119,10 @@ public class UserServiceImpl implements UserService {
         UserDTO userDTO = result.get();
         userDTO.setPassword("********"); // Mask password
 
-        // Fetch media by owner user ID and set mediaId if present
-        //sorting by id so that latest pic comes
-        List<Media> mediaList = mediaRepository.findByOwnerUserId(Long.parseLong(validId));
-        if (!mediaList.isEmpty()) {
-            Long mediaId = mediaList.stream()
-                    .filter(media -> media.getStatus() == MediaUploadStatus.ACTIVE && media.getUsageType() == MediaUsageType.PROFILE_PICTURE)
-                    .sorted(Comparator.comparingLong(Media::getId).reversed())
-                    .map(Media::getId)
-                    .findFirst()
-                    .orElse(null);
-
-            userDTO.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
-        }
+        // Fetch latest active profile picture ID for this user
+        userDTO.setMediaId(mediaRepository.findLatestActiveProfilePictureId(Long.parseLong(validId))
+                .map(String::valueOf)
+                .orElse(null));
 
         return userDTO;
     }
@@ -286,19 +274,29 @@ public class UserServiceImpl implements UserService {
                 .filter(s -> !s.isEmpty())
                 .toArray(String[]::new);
 
+        // Collect userIds not found in Redis for batch DB fallback
+        List<Long> missedIds = new ArrayList<>();
+
         for (String uid : userIds) {
             String lastActive = redisSessionStore.getLastActiveTimeStampUser(uid);
             if (lastActive != null) {
                 boolean online = (now - Long.parseLong(lastActive)) <= 4000;// 4 seconds if user is offline
                 result.add(new UserStatusDTO(uid, online, lastActive));
             } else {
-                UserDTO userdto = getUserById(uid);
-                if (userdto != null) {
-                    String lastActiveDB = userdto.getUserlastSeen();
-                    result.add(new UserStatusDTO(uid, false, lastActiveDB));
-                }
+                missedIds.add(Long.parseLong(uid));
             }
         }
+
+        // Single batch DB query instead of N individual getUserById calls
+        if (!missedIds.isEmpty()) {
+            Map<Long, String> lastSeenByUserId = userRepository.findAllById(missedIds).stream()
+                    .collect(Collectors.toMap(User::getId, u -> u.getUserlastSeen() != null ? u.getUserlastSeen() : ""));
+            for (Long uid : missedIds) {
+                String lastActiveDB = lastSeenByUserId.getOrDefault(uid, "");
+                result.add(new UserStatusDTO(String.valueOf(uid), false, lastActiveDB));
+            }
+        }
+
         return result;
     }
 

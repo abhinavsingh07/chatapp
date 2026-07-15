@@ -44,15 +44,9 @@ public class ConversationServiceImpl implements ConversationService {
         String loggedInUserId = InputSecurityUtils.secureId(SecurityUtil.getCurrentUserIdFromSecurityContext());
         String validConvId = InputSecurityUtils.secureId(id);
 
-        // first check if the logged in user is a participant of the conversation
-        List<ConversationParticipant> participants = participantRepository
-                .findByConversationId(Long.parseLong(validConvId));
-        boolean isParticipant = participants.stream()
-                .anyMatch(participant -> participant.getUserId().equals(Long.parseLong(loggedInUserId)));
-
-        // security check: if the logged in user is not a participant of the
-        // conversation, throw an exception
-        if (!isParticipant) {
+        // Verify the logged-in user is a participant of this conversation
+        if (!participantRepository.existsByConversationIdAndUserId(
+                Long.parseLong(validConvId), Long.parseLong(loggedInUserId))) {
             logger.warn("User [{}] is not a participant of conversation [{}]", loggedInUserId, validConvId);
             throw new ServiceException("Access denied: User is not a participant of this conversation");
         }

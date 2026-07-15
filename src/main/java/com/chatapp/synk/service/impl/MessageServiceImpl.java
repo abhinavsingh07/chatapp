@@ -1,7 +1,6 @@
 package com.chatapp.synk.service.impl;
 
 import com.chatapp.synk.dto.MessageDTO;
-import com.chatapp.synk.entity.ConversationParticipant;
 import com.chatapp.synk.entity.Message;
 import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.repository.ConversationParticipantRepository;
@@ -49,14 +48,9 @@ public class MessageServiceImpl implements MessageService {
         String validConvId = InputSecurityUtils.secureId(conversationId);
         String loggedInUserId = InputSecurityUtils.secureId(SecurityUtil.getCurrentUserIdFromSecurityContext());
 
-        // first check if the logged in user is a participant of the conversation
-        // security check
-        List<ConversationParticipant> participants = participantRepository
-                .findByConversationId(Long.parseLong(validConvId));
-        boolean isParticipant = participants.stream()
-                .anyMatch(participant -> participant.getUserId().equals(Long.parseLong(loggedInUserId)));
-
-        if (!isParticipant) {
+        // Verify the logged-in user is a participant of this conversation
+        if (!participantRepository.existsByConversationIdAndUserId(
+                Long.parseLong(validConvId), Long.parseLong(loggedInUserId))) {
             logger.warn("User [{}] is not a participant of conversation [{}]", loggedInUserId, validConvId);
             throw new ServiceException("Access denied: User is not a participant of this conversation");
         }
@@ -95,19 +89,9 @@ public class MessageServiceImpl implements MessageService {
                     .collect(Collectors.toList());
 
             if (!mediaIds.isEmpty() && savedMessage != null && savedMessage.getId() != null) {
-                for (Long mediaId : mediaIds) {
-                    try {
-                        //stored mediaIds need to be updated with messageId.
-                        mediaUploadService.updateMessageId(fromUserId, mediaId,
-                                Long.valueOf(savedMessage.getId()));
-                        logger.debug("[Media] Updated mediaId={} with messageId={}", mediaId, savedMessage.getId());
-                    } catch (Exception e) {
-                        logger.warn("[Media] Failed to update messageId for mediaId={}: {}", mediaId, e.getMessage());
-                        // Re-throw to trigger transaction rollback
-                        throw new ServiceException("Failed to associate media with message: " + e.getMessage(),
-                                HttpStatus.INTERNAL_SERVER_ERROR);
-                    }
-                }
+                // Batch update — single query instead of N individual calls
+                mediaUploadService.updateMessageIds(fromUserId, mediaIds,
+                        Long.valueOf(savedMessage.getId()));
                 logger.info("Successfully associated {} media files with messageId: {}", mediaIds.size(),
                         savedMessage.getId());
             }

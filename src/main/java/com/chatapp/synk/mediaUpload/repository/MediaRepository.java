@@ -105,9 +105,40 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
                         @Param("messageId") Long messageId);
 
         /**
+         * Batch update messageId for multiple media records at once.
+         * Only updates ACTIVE media owned by the given user.
+         */
+        @Modifying
+        @Transactional
+        @Query("UPDATE Media m SET m.messageId = :messageId " +
+                        "WHERE m.id IN :mediaIds AND m.ownerUserId = :userId AND m.status = 'ACTIVE'")
+        int updateMessageIdsBatch(
+                        @Param("mediaIds") List<Long> mediaIds,
+                        @Param("userId") Long userId,
+                        @Param("messageId") Long messageId);
+
+        /**
          * Find media by owner user ID.
          * @param ownerUserId User ID (owner)
          * @return List of Media objects if found, empty list otherwise
-         */                
+         */
         List<Media> findByOwnerUserId(Long ownerUserId);
+
+        /**
+         * Find the latest ACTIVE profile picture media ID for a given owner.
+         * Returns the ID of the most recent PROFILE_PICTURE with ACTIVE status,
+         * or empty if none found. Eliminates in-memory stream filtering.
+         */
+        @Query("SELECT m.id FROM Media m WHERE m.ownerUserId = :ownerUserId " +
+                        "AND m.status = 'ACTIVE' AND m.usageType = 'PROFILE_PICTURE' " +
+                        "ORDER BY m.id DESC")
+        Optional<Long> findLatestActiveProfilePictureId(@Param("ownerUserId") Long ownerUserId);
+
+        /**
+         * Batch version of {@link #findLatestActiveProfilePictureId} to fix N+1.
+         */
+        @Query("SELECT m.ownerUserId, m.id FROM Media m WHERE m.ownerUserId IN :ownerUserIds " +
+                        "AND m.status = 'ACTIVE' AND m.usageType = 'PROFILE_PICTURE' " +
+                        "ORDER BY m.id DESC")
+        List<Object[]> findLatestActiveProfilePictureIds(@Param("ownerUserIds") List<Long> ownerUserIds);
 }

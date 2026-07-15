@@ -10,4 +10,10 @@ import java.util.List;
 public interface ConversationParticipantRepository extends JpaRepository<ConversationParticipant, Long> {
     // Find all participants for a given conversation ID
     List<ConversationParticipant> findByConversationId(Long conversationId);
+
+    /**
+     * Efficient existence check — returns true if the user is a participant
+     * of the conversation, without loading full entity data.
+     */
+    boolean existsByConversationIdAndUserId(Long conversationId, Long userId);
 }

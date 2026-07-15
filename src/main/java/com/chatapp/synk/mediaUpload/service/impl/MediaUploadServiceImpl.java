@@ -18,6 +18,8 @@ import com.chatapp.synk.repository.ConversationParticipantRepository;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.util.Mapper;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -108,12 +110,8 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                         }
 
                         // Verify user is a participant in the conversation
-                        boolean isParticipant = conversationParticipantRepository
-                                        .findByConversationId(Long.valueOf(request.getConversationId()))
-                                        .stream()
-                                        .anyMatch(p -> p.getUserId().equals(userId));
-
-                        if (!isParticipant) {
+                        if (!conversationParticipantRepository.existsByConversationIdAndUserId(
+                                        Long.valueOf(request.getConversationId()), userId)) {
                                 logger.warn("User {} is not a participant in conversation {}",
                                                 userId, request.getConversationId());
                                 throw new ServiceException("User not authorized for this conversation",
@@ -278,12 +276,8 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                                                 HttpStatus.NOT_FOUND);
                         }
                 } else if (media.getUsageType() == MediaUsageType.CHAT_ATTACHMENT) {
-                        boolean isParticipant = conversationParticipantRepository
-                                        .findByConversationId(media.getConversationId())
-                                        .stream()
-                                        .anyMatch(p -> p.getUserId().equals(userId));
-
-                        if (!isParticipant) {
+                        if (!conversationParticipantRepository.existsByConversationIdAndUserId(
+                                        media.getConversationId(), userId)) {
                                 logger.warn("User {} is not a participant in conversation {} for mediaId: {}",
                                                 userId, media.getConversationId(), mediaId);
                                 throw new ServiceException("User not authorized for this conversation",
@@ -313,12 +307,8 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                                 userId, mediaId, conversationId);
 
                 // 1. Verify user is a participant in the conversation
-                boolean isParticipant = conversationParticipantRepository
-                                .findByConversationId(conversationId)
-                                .stream()
-                                .anyMatch(p -> p.getUserId().equals(userId));
-
-                if (!isParticipant) {
+                if (!conversationParticipantRepository.existsByConversationIdAndUserId(
+                                conversationId, userId)) {
                         logger.warn("User authorization failed: userId={} not a participant in conversationId={}",
                                         userId, conversationId);
                         throw new ServiceException("User not authorized for this conversation",
@@ -394,5 +384,20 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
                 logger.info("Successfully updated messageId for mediaId: {} to messageId: {}",
                                 mediaId, messageId);
+        }
+
+        @Transactional
+        public void updateMessageIds(Long userId, List<Long> mediaIds, Long messageId) {
+                logger.info("Batch updating messageId for {} media records, userId: {}, messageId: {}",
+                                mediaIds.size(), userId, messageId);
+                if (mediaIds == null || mediaIds.isEmpty()) {
+                        return;
+                }
+                int updated = mediaRepository.updateMessageIdsBatch(mediaIds, userId, messageId);
+                if (updated != mediaIds.size()) {
+                        logger.warn("Batch updateMessageIds: expected {} but updated {} — some media may be missing or not ACTIVE",
+                                        mediaIds.size(), updated);
+                }
+                logger.info("Batch updated messageId for {}/{} media records", updated, mediaIds.size());
         }
 }

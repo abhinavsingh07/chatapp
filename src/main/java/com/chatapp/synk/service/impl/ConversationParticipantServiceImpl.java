@@ -87,8 +87,7 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
         }
         String validId = InputSecurityUtils.secureId(conversationId);
         List<ConversationParticipant> list = conversationParticipantRepository.findByConversationId(Long.parseLong(validId));
-        for (ConversationParticipant cp : list) {
-            conversationParticipantRepository.deleteById(cp.getId());
-        }
+        // Batch delete — single DELETE query instead of N individual calls
+        conversationParticipantRepository.deleteAllInBatch(list);
     }
 }

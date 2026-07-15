@@ -9,13 +9,10 @@ import com.chatapp.synk.dto.ContactUserDTO;
 import com.chatapp.synk.dto.ConversationLastMsgDTO;
 import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.entity.Contact;
-import com.chatapp.synk.entity.Media;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.enums.ContactStatus;
 import com.chatapp.synk.enums.EmailStatus;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
-import com.chatapp.synk.mediaUpload.enums.MediaUsageType;
 import com.chatapp.synk.mediaUpload.repository.MediaRepository;
 import com.chatapp.synk.repository.ContactRepository;
 import com.chatapp.synk.security.SecurityUtil;
@@ -35,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -48,13 +44,15 @@ public class ContactServiceImpl implements ContactService {
     private final UserService userService;
     private final EmailService emailService;
     private final ExecutorService taskExecutor;
+    private final MediaRepository mediaRepository;
 
     public ContactServiceImpl(ContactRepository contactRepository, UserService userService, EmailService emailService,
-            ExecutorService taskExecutor) {
+            ExecutorService taskExecutor, MediaRepository mediaRepository) {
         this.contactRepository = contactRepository;
         this.userService = userService;
         this.emailService = emailService;
         this.taskExecutor = taskExecutor;
+        this.mediaRepository = mediaRepository;
     }
 
     @Override
@@ -94,17 +92,10 @@ public class ContactServiceImpl implements ContactService {
                 }
 
                 if (fetchMedia) {
-                    List<Media> mediaList = contact.getContactUserMedia();
-                    if (mediaList != null && !mediaList.isEmpty()) {
-                        Long mediaId = mediaList.stream()
-                                .filter(m -> m.getStatus() == MediaUploadStatus.ACTIVE
-                                        && m.getUsageType() == MediaUsageType.PROFILE_PICTURE)
-                                .sorted(Comparator.comparingLong(Media::getId).reversed())
-                                .map(Media::getId)
-                                .findFirst()
-                                .orElse(null);
-                        dto.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
-                    }
+                    dto.setMediaId(mediaRepository.findLatestActiveProfilePictureId(
+                                    Long.parseLong(dto.getUserId()))
+                            .map(String::valueOf)
+                            .orElse(null));
                 }
             }
 

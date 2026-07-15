@@ -1,12 +1,8 @@
 package com.chatapp.synk.service.impl;
 
 import com.chatapp.synk.dto.ConversationLastMsgDTO;
-import com.chatapp.synk.entity.Media;
-import com.chatapp.synk.mediaUpload.enums.MediaUploadStatus;
-import com.chatapp.synk.mediaUpload.enums.MediaUsageType;
 import com.chatapp.synk.mediaUpload.repository.MediaRepository;
 import com.chatapp.synk.repository.ConversationLastMessageRepository;
-import com.chatapp.synk.security.SecurityUtil;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.service.ConversationLastMessageService;
 import org.slf4j.Logger;
@@ -14,8 +10,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ConversationLastMessageServiceImpl implements ConversationLastMessageService {
@@ -58,19 +56,25 @@ public class ConversationLastMessageServiceImpl implements ConversationLastMessa
         List<ConversationLastMsgDTO> chatList = conversationLastMessageRepository
                 .findUserConversations(Long.parseLong(validUserId));
 
-        // Fetch latest active profile picture mediaId for each user in chat list
+        // Batch fetch latest active profile pictures — single query instead of N
+        List<Long> userIds = chatList.stream()
+                .map(dto -> Long.parseLong(dto.getUserId()))
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, Long> mediaIdByUserId = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            mediaRepository.findLatestActiveProfilePictureIds(userIds)
+                    .forEach(row -> {
+                        Long ownerUserId = (Long) row[0];
+                        Long mediaId = (Long) row[1];
+                        mediaIdByUserId.putIfAbsent(ownerUserId, mediaId); // first = latest (DESC sorted)
+                    });
+        }
+
         for (ConversationLastMsgDTO dto : chatList) {
-            List<Media> mediaList = mediaRepository.findByOwnerUserId(Long.parseLong(dto.getUserId()));
-            if (!mediaList.isEmpty()) {
-                Long mediaId = mediaList.stream()
-                        .filter(media -> media.getStatus() == MediaUploadStatus.ACTIVE
-                                && media.getUsageType() == MediaUsageType.PROFILE_PICTURE)
-                        .sorted(Comparator.comparingLong(Media::getId).reversed())
-                        .map(Media::getId)
-                        .findFirst()
-                        .orElse(null);
-                dto.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
-            }
+            Long mediaId = mediaIdByUserId.get(Long.parseLong(dto.getUserId()));
+            dto.setMediaId(mediaId != null ? String.valueOf(mediaId) : null);
         }
 
         if(logger.isDebugEnabled()) {
