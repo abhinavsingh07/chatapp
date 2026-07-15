@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.SecurityUtil;
+import com.chatapp.synk.service.UserPresenceService;
 import com.chatapp.synk.service.UserService;
 
 
@@ -23,10 +24,12 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final UserPresenceService userPresenceService;
 
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserPresenceService userPresenceService) {
         this.userService = userService;
+        this.userPresenceService = userPresenceService;
     }
 
     @GetMapping("/all")
@@ -92,7 +95,7 @@ public class UserController {
         // this is will give the last active status of multiple users, as user can be
         // active in multiple devices, so we will return the list of status of all
         // devices
-        List<UserStatusDTO> result = userService.getLastActiveUserStatus(userId);
+        List<UserStatusDTO> result = userPresenceService.getLastActiveUserStatus(userId);
         if (result.isEmpty()) {
             logger.warn("No status found for user ID {}", userId);
             return ResponseEntity

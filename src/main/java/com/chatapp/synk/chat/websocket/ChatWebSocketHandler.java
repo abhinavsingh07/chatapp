@@ -5,7 +5,7 @@ import com.chatapp.synk.chat.common.Json;
 import com.chatapp.synk.chat.rabbitmq.ChatMessagePublisher;
 import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.enums.ChatWebSocketStatus;
-import com.chatapp.synk.service.UserService;
+import com.chatapp.synk.service.UserPresenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -28,15 +28,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final RedisSessionStore redisSessionStore;
     private final ChatMessagePublisher chatMessagePublisher;
     private final ExecutorService taskExecutor;
-    private final UserService userService;
+    private final UserPresenceService userPresenceService;
 
     public ChatWebSocketHandler(LocalWsSessionRegistry localWsSessionRegistry, RedisSessionStore redisSessionStore,
-            ChatMessagePublisher chatMessagePublisher, ExecutorService taskExecutor, UserService userService) {
+            ChatMessagePublisher chatMessagePublisher, ExecutorService taskExecutor,
+            UserPresenceService userPresenceService) {
         this.localWsSessionRegistry = localWsSessionRegistry;
         this.redisSessionStore = redisSessionStore;
         this.chatMessagePublisher = chatMessagePublisher;
         this.taskExecutor = taskExecutor;
-        this.userService = userService;
+        this.userPresenceService = userPresenceService;
     }
 
     @Override
@@ -137,7 +138,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (userId != null) {
             try {
                 // internally takes data from redis
-                userService.updateLastSeen(userId);
+                userPresenceService.updateLastSeen(userId);
             } catch (Exception ex) {
                 logger.error("[WS_LAST_SEEN_UPDATE_FAILED] | userId={} sessionId={}", userId, sessionId, ex);
             }

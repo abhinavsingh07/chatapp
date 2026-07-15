@@ -1,8 +1,6 @@
 package com.chatapp.synk.service.impl;
 
-import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.entity.Contact;
 import com.chatapp.synk.entity.User;
 import com.chatapp.synk.entity.UserRole;
@@ -34,8 +32,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.Optional;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,20 +45,17 @@ public class UserServiceImpl implements UserService {
     private final ContactRepository contactRepository;
     private final UserRoleRepository userRoleRepository;
     private final MediaRepository mediaRepository;
-    private final RedisSessionStore redisSessionStore;
 
     public UserServiceImpl(UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ContactRepository contactRepository,
             UserRoleRepository userRoleRepository,
-            MediaRepository mediaRepository,
-            RedisSessionStore redisSessionStore) {
+            MediaRepository mediaRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.contactRepository = contactRepository;
         this.userRoleRepository = userRoleRepository;
         this.mediaRepository = mediaRepository;
-        this.redisSessionStore = redisSessionStore;
 
     }
 
@@ -222,33 +217,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO updateLastSeen(String userId) {
-        logger.debug("Updating last seen for user ID: {}", userId);
-        String validId = InputSecurityUtils.secureId(userId);
-
-        // Fetch user from DB first
-        User user = userRepository
-                .findById(Long.parseLong(validId))
-                .orElseThrow(() -> new ServiceException("User not found with ID", HttpStatus.NOT_FOUND));
-
-        // Find lastactive time from redis
-        String lastActive = redisSessionStore.getLastActiveTimeStampUser(validId);
-        if (StringUtil.isBlank(lastActive)) {
-            throw new ServiceException("Last active timestamp not found", HttpStatus.NOT_FOUND);
-        }
-
-        // Update field
-        // saving epochmilli in db as well frontend parsethis correctly
-        user.setUserlastSeen(lastActive);
-
-        // Save to DB
-        User updatedUser = userRepository.save(user);
-
-        // Cache gets populated with this returned UserDTO object
-        return Mapper.mapToUserDTO(updatedUser);
-    }
-
-    @Override
     @Caching(evict = {
             @CacheEvict(value = "userCache", key = "#userId", beforeInvocation = true),
             @CacheEvict(value = "userListCache", key = "'allUsers'", beforeInvocation = true)
@@ -258,46 +226,6 @@ public class UserServiceImpl implements UserService {
         String validId = InputSecurityUtils.secureId(userId);
         userRepository.deleteById(Long.parseLong(validId));
         logger.info("User deleted successfully. ID: {}", userId);
-    }
-
-    // This method returns lastactive timestamp for multiple users, as user can be
-    // active in multiple devices, so we will return the list of status of all
-    // devices
-    @Override
-    public List<UserStatusDTO> getLastActiveUserStatus(String userId) {
-        logger.debug("Fetching last active timestamp for user(s): {}", userId);
-        long now = Instant.now().toEpochMilli();
-        List<UserStatusDTO> result = new ArrayList<>();
-
-        String[] userIds = Arrays.stream(userId.split(","))
-                .map(InputSecurityUtils::secureId)
-                .filter(s -> !s.isEmpty())
-                .toArray(String[]::new);
-
-        // Collect userIds not found in Redis for batch DB fallback
-        List<Long> missedIds = new ArrayList<>();
-
-        for (String uid : userIds) {
-            String lastActive = redisSessionStore.getLastActiveTimeStampUser(uid);
-            if (lastActive != null) {
-                boolean online = (now - Long.parseLong(lastActive)) <= 4000;// 4 seconds if user is offline
-                result.add(new UserStatusDTO(uid, online, lastActive));
-            } else {
-                missedIds.add(Long.parseLong(uid));
-            }
-        }
-
-        // Single batch DB query instead of N individual getUserById calls
-        if (!missedIds.isEmpty()) {
-            Map<Long, String> lastSeenByUserId = userRepository.findAllById(missedIds).stream()
-                    .collect(Collectors.toMap(User::getId, u -> u.getUserlastSeen() != null ? u.getUserlastSeen() : ""));
-            for (Long uid : missedIds) {
-                String lastActiveDB = lastSeenByUserId.getOrDefault(uid, "");
-                result.add(new UserStatusDTO(String.valueOf(uid), false, lastActiveDB));
-            }
-        }
-
-        return result;
     }
 
     // we will update the contactUserId in contact table on user registration when

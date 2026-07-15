@@ -4,6 +4,7 @@ import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.dto.UserStatusDTO;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.SecurityUtil;
+import com.chatapp.synk.service.UserPresenceService;
 import com.chatapp.synk.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,9 @@ class UserControllerTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private UserPresenceService userPresenceService;
 
     @InjectMocks
     private UserController userController;
@@ -237,7 +241,7 @@ class UserControllerTest {
     @Test
     void testGetLastActiveUserStatus_WhenStatusExists() {
         // Arrange
-        when(userService.getLastActiveUserStatus("1")).thenReturn(List.of(mockUserStatus));
+        when(userPresenceService.getLastActiveUserStatus("1")).thenReturn(List.of(mockUserStatus));
 
         // Act
         ResponseEntity<SuccessResponse<UserStatusDTO>> response = userController.getLastActiveUserStatus("1");
@@ -248,7 +252,7 @@ class UserControllerTest {
         assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
         assertEquals("User statuses fetched", response.getBody().getMessage());
         assertEquals(1, response.getBody().getData().size());
-        verify(userService, times(1)).getLastActiveUserStatus("1");
+        verify(userPresenceService, times(1)).getLastActiveUserStatus("1");
     }
 
     @Test
@@ -280,7 +284,7 @@ class UserControllerTest {
     @Test
     void testGetLastActiveUserStatus_WhenStatusNotFound() {
         // Arrange
-        when(userService.getLastActiveUserStatus("99")).thenReturn(Collections.emptyList());
+        when(userPresenceService.getLastActiveUserStatus("99")).thenReturn(Collections.emptyList());
 
         // Act
         ResponseEntity<SuccessResponse<UserStatusDTO>> response = userController.getLastActiveUserStatus("99");
@@ -291,6 +295,6 @@ class UserControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getBody().getResponseCode());
         assertEquals("No status found", response.getBody().getMessage());
         assertTrue(response.getBody().getData().isEmpty());
-        verify(userService, times(1)).getLastActiveUserStatus("99");
+        verify(userPresenceService, times(1)).getLastActiveUserStatus("99");
     }
 }
