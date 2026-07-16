@@ -8,6 +8,7 @@ import com.chatapp.synk.exceptionHandler.ServiceException;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.service.AuthService;
+import com.chatapp.synk.service.TokenService;
 import com.chatapp.synk.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class AuthControllerTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private TokenService tokenService;
 
     @InjectMocks
     private AuthController authController;
@@ -100,7 +104,7 @@ class AuthControllerTest {
     void testRefreshToken_RevokedToken() {
         // Arrange
         RefreshTokenRequest request = new RefreshTokenRequest("revoked-refresh-token");
-        when(authService.refreshToken(request))
+        when(tokenService.refreshToken(request))
                 .thenThrow(new InvalidTokenException("Refresh token has been revoked"));
 
         // Act & Assert
@@ -108,7 +112,7 @@ class AuthControllerTest {
                 InvalidTokenException.class,
                 () -> authController.refreshToken(request));
         assertEquals("Refresh token has been revoked", exception.getMessage());
-        verify(authService, times(1)).refreshToken(request);
+        verify(tokenService, times(1)).refreshToken(request);
     }
 
     @Test

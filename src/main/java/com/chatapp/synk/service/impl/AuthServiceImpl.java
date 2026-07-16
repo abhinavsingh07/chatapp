@@ -19,13 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.chatapp.synk.dto.AuthDTO;
 import com.chatapp.synk.dto.RefreshTokenDto;
-import com.chatapp.synk.dto.RefreshTokenRequest;
 import com.chatapp.synk.dto.UserDTO;
-import com.chatapp.synk.entity.RefreshToken;
 import com.chatapp.synk.entity.User;
-import com.chatapp.synk.exceptionHandler.InvalidTokenException;
 import com.chatapp.synk.exceptionHandler.ServiceException;
-import com.chatapp.synk.repository.RefreshTokenRepository;
 import com.chatapp.synk.repository.UserRepository;
 import com.chatapp.synk.security.CustomUserDetails;
 import com.chatapp.synk.security.JwtResponse;
@@ -34,33 +30,33 @@ import com.chatapp.synk.security.PhoneNumberAuthenticationToken;
 import com.chatapp.synk.security_validator.InputSecurityUtils;
 import com.chatapp.synk.security_validator.InputValidationAndSanitizationService;
 import com.chatapp.synk.service.AuthService;
+import com.chatapp.synk.service.TokenService;
 import com.chatapp.synk.service.UserService;
 import com.chatapp.synk.util.HashUtil;
 import com.chatapp.synk.util.Mapper;
 import com.chatapp.synk.util.MaskIdentifierUtil;
 import com.chatapp.synk.util.PasswordUtil;
-import com.chatapp.synk.util.StringUtil;
 
 @Service
 public class AuthServiceImpl implements AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final TokenService tokenService;
 
-    public AuthServiceImpl(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
+    public AuthServiceImpl(UserRepository userRepository,
             PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserService userService,
-            AuthenticationManager authenticationManager) {
+            AuthenticationManager authenticationManager, TokenService tokenService) {
         this.userRepository = userRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userService = userService;
         this.authenticationManager = authenticationManager;
+        this.tokenService = tokenService;
     }
 
     // Resets a user's password after validating the forgot-password request.
@@ -129,7 +125,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
         // save refresh token on login
         RefreshTokenDto refreshTokenDto = buildRefreshTokenDto(refreshToken, user.getId());
-        saveRefreshToken(refreshTokenDto);
+        tokenService.saveRefreshToken(refreshTokenDto);
 
         if (logger.isDebugEnabled()) {
             logger.debug("JWT token generated for user: {}", MaskIdentifierUtil.maskIdentifier(user.getUsername()));
@@ -161,95 +157,6 @@ public class AuthServiceImpl implements AuthService {
             logger.warn("Authentication failed - invalid credentials for user: {}",
                     MaskIdentifierUtil.maskIdentifier(username));
             throw new ServiceException("INVALID_CREDENTIALS", e);
-        }
-    }
-
-    // Generates a new access token from a valid refresh token.
-    @Override
-    public JwtResponse refreshToken(RefreshTokenRequest request) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Generating new access token via refresh token");
-        }
-
-        if (request == null || StringUtil.isBlank(request.getRefreshToken())) {
-            throw new ServiceException("Refresh token is required", HttpStatus.BAD_REQUEST);
-        }
-
-        String refreshToken = request.getRefreshToken();
-        RefreshToken storedRefreshToken = getStoredRefreshToken(refreshToken);
-        if ('Y' == storedRefreshToken.isRevoked()) {
-            throw new InvalidTokenException("Refresh token has been revoked");
-        }
-        // internally validating token signature
-        String username = jwtUtil.extractUsername(refreshToken);
-        if (StringUtil.isBlank(username)) {
-            throw new InvalidTokenException("Refresh token validation failed - username not found");
-        }
-
-        UserDTO user = getUserForRefreshToken(username);
-        String role = user.getRoleName() != null ? user.getRoleName().name() : "";
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", role.isEmpty() ? List.of() : List.of(role));
-        claims.put("id", user.getId());
-
-        String newToken = jwtUtil.generateAccessToken(claims, user.getPhoneNumber());
-        // logger.info("New JWT token generated via refresh for user ID: {}",
-        // user.getId());
-
-        return new JwtResponse(newToken, refreshToken, user.getEmail(), user.getName(),
-                role, user.getEmail(), user.getProfilePictureUrl(), user.getId());
-    }
-
-    @Override
-    @Transactional
-    public RefreshTokenDto saveRefreshToken(RefreshTokenDto refreshTokenDto) {
-        if (refreshTokenDto == null) {
-            throw new ServiceException("Refresh token data is required", HttpStatus.BAD_REQUEST);
-        }
-        if (StringUtil.isBlank(refreshTokenDto.getUserId())) {
-            throw new ServiceException("Refresh token user ID is required", HttpStatus.BAD_REQUEST);
-        }
-        if (StringUtil.isBlank(refreshTokenDto.getTokenHash())) {
-            throw new ServiceException("Refresh token hash is required", HttpStatus.BAD_REQUEST);
-        }
-        if (refreshTokenDto.getExpiresAt() == null) {
-            throw new ServiceException("Refresh token expiry is required", HttpStatus.BAD_REQUEST);
-        }
-
-        RefreshToken refreshToken = Mapper.mapToRefreshTokenEntity(refreshTokenDto);
-        RefreshToken savedRefreshToken = refreshTokenRepository.save(refreshToken);
-        return Mapper.mapToRefreshTokenDto(savedRefreshToken);
-    }
-
-    @Override
-    @Transactional
-    public void revokeTokenMethod(RefreshTokenRequest request) {
-        if (request == null || StringUtil.isBlank(request.getRefreshToken())) {
-            throw new ServiceException("Refresh token is required", HttpStatus.BAD_REQUEST);
-        }
-
-        String tokenHash = HashUtil.hashWithSha256(request.getRefreshToken());
-        int revokedCount = refreshTokenRepository.revokeToken(tokenHash);
-        if (revokedCount == 0) {
-            throw new ServiceException("Refresh token not found", HttpStatus.NOT_FOUND);
-        }
-        logger.info("Refresh token revoked successfully.");
-    }
-
-    // Loads the user referenced by a refresh token or raises an invalid-token
-    // error.
-    private RefreshToken getStoredRefreshToken(String refreshToken) {
-        String tokenHash = HashUtil.hashWithSha256(refreshToken);
-        return refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new InvalidTokenException("Refresh token validation failed - token not found"));
-    }
-
-    private UserDTO getUserForRefreshToken(String username) {
-        try {
-            return userService.getUserByPhoneNumberOrEmail(username);
-        } catch (ServiceException ex) {
-            throw new InvalidTokenException("Refresh token validation failed - user not found", ex);
         }
     }
 

@@ -6,6 +6,7 @@ import com.chatapp.synk.dto.UserDTO;
 import com.chatapp.synk.response.SuccessResponse;
 import com.chatapp.synk.security.JwtResponse;
 import com.chatapp.synk.service.AuthService;
+import com.chatapp.synk.service.TokenService;
 import com.chatapp.synk.service.UserService;
 
 import jakarta.validation.Valid;
@@ -26,10 +27,12 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthService authService;
+    private final TokenService tokenService;
     private final UserService userService;
 
-    public AuthController(AuthService authService, UserService userService) {
+    public AuthController(AuthService authService, TokenService tokenService, UserService userService) {
         this.authService = authService;
+        this.tokenService = tokenService;
         this.userService = userService;
     }
 
@@ -41,12 +44,12 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<JwtResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         logger.info("Refresh Token request received.");
-        return ResponseEntity.ok(authService.refreshToken(request));
+        return ResponseEntity.ok(tokenService.refreshToken(request));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<SuccessResponse<?>> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.revokeTokenMethod(request);
+        tokenService.revokeTokenMethod(request);
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Logged out successfully", List.of()));
     }
 
