@@ -20,8 +20,8 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(AuthDTO authDTO) {
         // Step 1: Generic security checks
-        checkFieldForPotentialSecurityRisks(authDTO.getPhoneNumberOrEmail(), 50, true, "phoneNumberOrEmail");
-        checkFieldForPotentialSecurityRisks(authDTO.getPassword(), 100, true, "password");
+        InputSecurityUtils.checkField(authDTO.getPhoneNumberOrEmail(), 50, true, "phoneNumberOrEmail");
+        InputSecurityUtils.checkField(authDTO.getPassword(), 100, true, "password");
 
         // Step 2: Business-specific checks
         if (authDTO.getPhoneNumberOrEmail() == null) {
@@ -62,13 +62,13 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(UserDTO userDTO) {
         // Generic validation (length, nulls, injection patterns)
-        checkFieldForPotentialSecurityRisks(userDTO.getId(), 100, true, "id");
-        checkFieldForPotentialSecurityRisks(userDTO.getPhoneNumber(), 15, false, "phoneNumber");
-        checkFieldForPotentialSecurityRisks(userDTO.getEmail(), 100, true, "email");
-        checkFieldForPotentialSecurityRisks(userDTO.getPassword(), 200, true, "password");
-        checkFieldForPotentialSecurityRisks(userDTO.getName(), 50, true, "name");
-        checkFieldForPotentialSecurityRisks(userDTO.getProfilePictureUrl(), 200, true, "profilePictureUrl");
-        checkFieldForPotentialSecurityRisks(userDTO.getAbout(), 500, true, "about");
+        InputSecurityUtils.checkField(userDTO.getId(), 100, true, "id");
+        InputSecurityUtils.checkField(userDTO.getPhoneNumber(), 15, false, "phoneNumber");
+        InputSecurityUtils.checkField(userDTO.getEmail(), 100, true, "email");
+        InputSecurityUtils.checkField(userDTO.getPassword(), 200, true, "password");
+        InputSecurityUtils.checkField(userDTO.getName(), 50, true, "name");
+        InputSecurityUtils.checkField(userDTO.getProfilePictureUrl(), 200, true, "profilePictureUrl");
+        InputSecurityUtils.checkField(userDTO.getAbout(), 500, true, "about");
 
         // Business-specific rules
         if (userDTO.getPhoneNumber() == null || !UserInputValidator.isValidPhoneNumber(userDTO.getPhoneNumber())) {
@@ -107,10 +107,10 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(ContactDTO contactDTO) {
         // Generic validation (length, nulls, injection patterns)
-        checkFieldForPotentialSecurityRisks(contactDTO.getId(), 100, true, "id");
-        checkFieldForPotentialSecurityRisks(contactDTO.getUserId(), 100, true, "userId");
-        checkFieldForPotentialSecurityRisks(contactDTO.getEmail(), 100, true, "email");
-        checkFieldForPotentialSecurityRisks(contactDTO.getContactUserId(), 100, true, "contactUserId");
+        InputSecurityUtils.checkField(contactDTO.getId(), 100, true, "id");
+        InputSecurityUtils.checkField(contactDTO.getUserId(), 100, true, "userId");
+        InputSecurityUtils.checkField(contactDTO.getEmail(), 100, true, "email");
+        InputSecurityUtils.checkField(contactDTO.getContactUserId(), 100, true, "contactUserId");
 
         // Business-specific rules
         if (contactDTO.getUserId() == null || contactDTO.getUserId().trim().isEmpty()) {
@@ -137,7 +137,7 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(ConversationDTO conversationDTO) {
         // Generic validation
-        checkFieldForPotentialSecurityRisks(conversationDTO.getId(), 100, true, "id");
+        InputSecurityUtils.checkField(conversationDTO.getId(), 100, true, "id");
 
         // Business-specific rules
         if (conversationDTO.getConversationType() == null) {
@@ -170,9 +170,9 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(ConversationParticipantDTO dto) {
         // Generic validation with field-specific max lengths
-        checkFieldForPotentialSecurityRisks(dto.getId(), 100, false, "id"); // id can be optional
-        checkFieldForPotentialSecurityRisks(dto.getConversationId(), 100, true, "conversationId");
-        checkFieldForPotentialSecurityRisks(dto.getUserId(), 100, true, "userId");
+        InputSecurityUtils.checkField(dto.getId(), 100, false, "id"); // id can be optional
+        InputSecurityUtils.checkField(dto.getConversationId(), 100, true, "conversationId");
+        InputSecurityUtils.checkField(dto.getUserId(), 100, true, "userId");
 
         // Business rules
         if (dto.getConversationId() == null || dto.getConversationId().trim().isEmpty()) {
@@ -202,15 +202,15 @@ public class InputValidationAndSanitizationService {
 
     private static void validateForSecurityThreats(MessageDTO dto) {
         // Id fields
-        checkFieldForPotentialSecurityRisks(dto.getId(), 100, false, "id");
-        checkFieldForPotentialSecurityRisks(dto.getConversationId(), 100, true, "conversationId");
-        checkFieldForPotentialSecurityRisks(dto.getSenderId(), 100, true, "senderId");
-        checkFieldForPotentialSecurityRisks(dto.getReceiverId(), 100, true, "receiverId");
+        InputSecurityUtils.checkField(dto.getId(), 100, false, "id");
+        InputSecurityUtils.checkField(dto.getConversationId(), 100, true, "conversationId");
+        InputSecurityUtils.checkField(dto.getSenderId(), 100, true, "senderId");
+        InputSecurityUtils.checkField(dto.getReceiverId(), 100, true, "receiverId");
 
         // Message content - could be optional but should be checked for XSS
         // allow special should be true as user can enter ?,@,#,$ any special character
         // and we are checking for security vulnerability.
-        checkFieldForPotentialSecurityRisks(dto.getContent(), 2000, true, "content");
+        InputSecurityUtils.checkField(dto.getContent(), 2000, true, "content");
 
 
         // Required field validation
@@ -225,12 +225,4 @@ public class InputValidationAndSanitizationService {
         }
     }
 
-    private static void checkFieldForPotentialSecurityRisks(String value, int maxLength, boolean allowSpecial, String fieldName) {
-        if (value == null) return;
-        //security validator check for potential security risks.
-        SecurityValidationResult result = SecurityValidationService.validateInput(value, maxLength, allowSpecial);
-        if (!result.isValid()) {
-            throw new SecurityException(fieldName + " validation failed: " + result.getReason());
-        }
-    }
 }

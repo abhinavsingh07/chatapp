@@ -2,6 +2,7 @@ package com.chatapp.synk.chat.websocket;
 
 import com.chatapp.synk.chat.common.ChatMessage;
 import com.chatapp.synk.chat.common.Json;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.chatapp.synk.chat.rabbitmq.ChatMessagePublisher;
 import com.chatapp.synk.chat.redis.RedisSessionStore;
 import com.chatapp.synk.enums.ChatWebSocketStatus;
@@ -76,8 +77,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         logger.info("[WS_CONNECTED] | userId={} sessionId={} serverId={}", userId, sessionId, serverId);
 
-        wsSession.sendMessage(new TextMessage(String.format(
-                "{\"type\":\"connected\",\"userId\":\"%s\",\"serverId\":\"%s\"}", userId, serverId)));
+        ObjectNode connectedMsg = Json.mapper().createObjectNode();
+        connectedMsg.put("type", "connected");
+        connectedMsg.put("userId", userId);
+        connectedMsg.put("serverId", serverId);
+        wsSession.sendMessage(new TextMessage(connectedMsg.toString()));
     }
 
     @Override
@@ -111,8 +115,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     logger.error("[WS_MESSAGE_PROCESSING_FAILED] | userId={} sessionId={} payload={}",
                             userId, sessionId, payload, ex);
                     try {
-                        wsSession
-                                .sendMessage(new TextMessage("{\"error\":\"Invalid message format or server error\"}"));
+                        ObjectNode errMsg = Json.mapper().createObjectNode();
+                        errMsg.put("error", "Invalid message format or server error");
+                        wsSession.sendMessage(new TextMessage(errMsg.toString()));
                     } catch (IOException ioEx) {
                         logger.error("[WS_ERROR_RESPONSE_FAILED] | userId={} sessionId={}", userId, sessionId, ioEx);
                     }
@@ -126,7 +131,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (Exception e) {
             logger.error("[WS_TASK_SUBMISSION_FAILED] | userId={} sessionId={} payload={}",
                     userId, sessionId, payload, e);
-            wsSession.sendMessage(new TextMessage("{\"error\":\"Server error, please retry\"}"));
+            ObjectNode errMsg = Json.mapper().createObjectNode();
+            errMsg.put("error", "Server error, please retry");
+            wsSession.sendMessage(new TextMessage(errMsg.toString()));
         }
     }
 

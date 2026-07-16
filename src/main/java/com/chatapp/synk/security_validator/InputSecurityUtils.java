@@ -103,9 +103,11 @@ public class InputSecurityUtils {
     }
 
     /**
-     * Reusable security risk checker
+     * Reusable security risk checker. Package-private so
+     * {@link InputValidationAndSanitizationService} can reuse it.
      */
-    private static void checkField(String value, int maxLength, boolean allowSpecial, String fieldName) {
+    static void checkField(String value, int maxLength, boolean allowSpecial, String fieldName) {
+        if (value == null) return;
         SecurityValidationResult result = SecurityValidationService.validateInput(value, maxLength, allowSpecial);
         if (!result.isValid()) {
             throw new SecurityException(fieldName + " validation failed: " + result.getReason());
