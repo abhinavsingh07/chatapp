@@ -37,7 +37,7 @@ public class UserInputValidator {
     }
 
     public static boolean isValidPhoneNumber(String input) {
-        return input.matches("^\\d{10}$"); // Adjust pattern if needed
+        return input != null && PHONE_PATTERN.matcher(input.trim()).matches();
     }
 
     public static boolean isValidEmail(String email) {

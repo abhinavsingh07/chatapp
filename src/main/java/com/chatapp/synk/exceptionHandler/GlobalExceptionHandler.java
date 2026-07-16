@@ -32,50 +32,26 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ErrorResponse<Void>> handleServiceException(ServiceException exception) {
                 logger.warn("ServiceException occurred: {} stack trace: {}", exception.getMessage(), exception);
                 HttpStatus status = exception.getStatus();
-                return ResponseEntity.status(status)
-                                .body(new ErrorResponse<Void>(
-                                                status.value(),
-                                                status,
-                                                exception.getMessage()));
+                return buildErrorResponse(status, exception.getMessage());
         }
 
         @ExceptionHandler(InvalidTokenException.class)
         public ResponseEntity<ErrorResponse<Void>> handleInvalidToken(InvalidTokenException ex) {
                 logger.warn("InvalidTokenException occured: {} stack trace: {}", ex.getMessage(), ex);
-
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(new ErrorResponse<Void>(
-                                                HttpStatus.UNAUTHORIZED.value(),
-                                                HttpStatus.UNAUTHORIZED,
-                                                ex.getMessage()));
+                return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
         }
 
         @ExceptionHandler(AccessDeniedException.class)
         public ResponseEntity<ErrorResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
                 logger.warn("AccessDeniedException occured: {} stack trace: {}", ex.getMessage(), ex);
-
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                .body(new ErrorResponse<Void>(
-                                                HttpStatus.FORBIDDEN.value(),
-                                                HttpStatus.FORBIDDEN,
-                                                ex.getMessage()));
+                return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
         }
 
-        // This method calls as method has @transactional annotation 
-        // on repo.save DataIntegrityViolationException throws 
-        // from outside try catch block so we need to handle 
-        // it here in global exception handler
         @ExceptionHandler(DataIntegrityViolationException.class)
         public ResponseEntity<ErrorResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-                // Log the full raw SQL error for debugging — never send it to the client
                 logger.warn("DataIntegrityViolationException: {}", ex.getMessage());
-
                 String friendlyMessage = resolveDuplicateEntryMessage(ex);
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                                .body(new ErrorResponse<Void>(
-                                                HttpStatus.CONFLICT.value(),
-                                                HttpStatus.CONFLICT,
-                                                friendlyMessage));
+                return buildErrorResponse(HttpStatus.CONFLICT, friendlyMessage);
         }
 
         private String resolveDuplicateEntryMessage(DataIntegrityViolationException ex) {
@@ -94,15 +70,16 @@ public class GlobalExceptionHandler {
                 return "A conflict occurred. Please check your input and try again";
         }
 
-        @ExceptionHandler(Exception.class) // catches Runtime Exception as well
+        @ExceptionHandler(Exception.class)
         public ResponseEntity<ErrorResponse<Void>> handleOtherExceptions(Exception ex) {
                 logger.error("Unexpected exception: {}", ex.getMessage(), ex);
+                return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                                "An internal error occurred. Please try again later.");
+        }
 
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(new ErrorResponse<Void>(
-                                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                                                HttpStatus.INTERNAL_SERVER_ERROR,
-                                                "An internal error occurred. Please try again later."));
+        private <T> ResponseEntity<ErrorResponse<T>> buildErrorResponse(HttpStatus status, String message) {
+                return ResponseEntity.status(status)
+                                .body(new ErrorResponse<T>(status.value(), status, message));
         }
 
         @ExceptionHandler(MethodArgumentNotValidException.class)

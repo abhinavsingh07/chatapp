@@ -67,7 +67,7 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(Mapper::mapToUserDTO)
                 .collect(Collectors.toList());
-        allUsers.forEach(user -> user.setPassword("********")); // Mask passwords
+        allUsers.forEach(user -> user.setPassword(PasswordUtil.MASKED_PASSWORD)); // Mask passwords
         return allUsers;
     }
 
@@ -112,7 +112,7 @@ public class UserServiceImpl implements UserService {
         }
 
         UserDTO userDTO = result.get();
-        userDTO.setPassword("********"); // Mask password
+        userDTO.setPassword(PasswordUtil.MASKED_PASSWORD); // Mask password
 
         // Fetch latest active profile picture ID for this user
         userDTO.setMediaId(mediaRepository.findLatestActiveProfilePictureId(Long.parseLong(validId))
@@ -149,7 +149,7 @@ public class UserServiceImpl implements UserService {
 
             // convert result to dto back
             UserDTO userdto = Mapper.mapToUserDTO(savedUser);
-            userdto.setPassword("********"); // Mask password in response
+            userdto.setPassword(PasswordUtil.MASKED_PASSWORD); // Mask password in response
 
             // logger.info("User registration/creation successful. User ID: {}",
             // savedUser.getId());
@@ -207,7 +207,7 @@ public class UserServiceImpl implements UserService {
             }
 
             UserDTO updatedUserDTO = Mapper.mapToUserDTO(updatedUser);
-            updatedUserDTO.setPassword("********");
+            updatedUserDTO.setPassword(PasswordUtil.MASKED_PASSWORD);
             return updatedUserDTO;
         } catch (ServiceException ex) {
             throw ex;

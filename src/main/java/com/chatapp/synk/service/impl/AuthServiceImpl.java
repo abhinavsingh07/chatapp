@@ -93,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
         logger.info("Forgot password reset completed for user ID: {}", updatedUser.getId());
 
         UserDTO updatedUserDTO = Mapper.mapToUserDTO(updatedUser);
-        updatedUserDTO.setPassword("********");
+        updatedUserDTO.setPassword(PasswordUtil.MASKED_PASSWORD);
         return updatedUserDTO;
     }
 

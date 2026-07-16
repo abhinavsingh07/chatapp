@@ -1,7 +1,10 @@
 package com.chatapp.synk.util;
 
 public class PasswordUtil {
-       public static boolean isStrongPassword(String password) {
+
+    public static final String MASKED_PASSWORD = "********";
+
+    public static boolean isStrongPassword(String password) {
         return password != null
                 && password.length() >= 8
                 && password.chars().anyMatch(Character::isUpperCase)
