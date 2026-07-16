@@ -47,22 +47,7 @@ public class ChatMessageListener {
 
             // Persist only chat messages with atomicity guarantee
             if (deliveryEnvelope.getMessage().getWsStatus().equals(ChatWebSocketStatus.CHAT)) {
-                MessageDTO messageDTO = new MessageDTO();
-                messageDTO.setSenderId(deliveryEnvelope.getMessage().getFromUserId());
-                messageDTO.setReceiverId(deliveryEnvelope.getMessage().getToUserId());
-                messageDTO.setContent(deliveryEnvelope.getMessage().getBody());
-                messageDTO.setConversationId(deliveryEnvelope.getMessage().getConversationId());
-                messageDTO.setMessageStatus(MessageStatus.SENT);
-
-                // Atomically save message and update media IDs (single transaction)
-                String mediaIdsStr = deliveryEnvelope.getMessage().getMediaIds();
-                logger.info("[DB] MEDIA STRR..**** {}", mediaIdsStr);
-                //db call
-                messageService.saveMessageWithMediaIds(messageDTO, mediaIdsStr, 
-                    Long.valueOf(deliveryEnvelope.getMessage().getFromUserId()));
-                logger.info("[DB] Persisted message with media associations conversationId={} senderId={} receiverId={}", 
-                    deliveryEnvelope.getMessage().getConversationId(), deliveryEnvelope.getMessage().getFromUserId(), 
-                    deliveryEnvelope.getMessage().getToUserId());
+                persistChatMessage(deliveryEnvelope.getMessage());
             }
 
             // Attempt delivery
@@ -113,6 +98,26 @@ public class ChatMessageListener {
             logger.debug("[WS] SessionId={} closed/missing for userId={}", sessionId, env.getTargetUserId());
         }
         return false;
+    }
+
+    /**
+     * Builds a MessageDTO from the incoming chat message and persists it atomically
+     * with media associations in a single transaction.
+     */
+    private void persistChatMessage(ChatMessage msg) {
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setSenderId(msg.getFromUserId());
+        messageDTO.setReceiverId(msg.getToUserId());
+        messageDTO.setContent(msg.getBody());
+        messageDTO.setConversationId(msg.getConversationId());
+        messageDTO.setMessageStatus(MessageStatus.SENT);
+
+        String mediaIdsStr = msg.getMediaIds();
+        //logger.info("[DB] MEDIA STRR..**** {}", mediaIdsStr);
+        messageService.saveMessageWithMediaIds(messageDTO, mediaIdsStr,
+                Long.valueOf(msg.getFromUserId()));
+        logger.info("[DB] Persisted message with media associations conversationId={} senderId={} receiverId={}",
+                msg.getConversationId(), msg.getFromUserId(), msg.getToUserId());
     }
 
     /**
