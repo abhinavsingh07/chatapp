@@ -44,7 +44,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         String userId = (String) wsSession.getAttributes().get("userId");
-        String serverId = System.getProperty("server.id");
         String sessionId = wsSession.getId();
 
         if (userId == null) {
@@ -53,87 +52,36 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        WebSocketSession localSession = localWsSessionRegistry.get(userId);
-        String storedRedisSessionId = redisSessionStore.getUserSessionId(userId);
-
-        boolean hasLocalSession = (localSession != null && localSession.isOpen());
-        boolean hasDifferentRedisSession = (storedRedisSessionId != null && !storedRedisSessionId.equals(sessionId));
-
-        if (hasLocalSession || hasDifferentRedisSession) {
-            logger.warn("[WS_CONNECT_REJECTED] | userId={} sessionId={} reason=Duplicate session", userId, sessionId);
-            try {
-                wsSession.close(CloseStatus.POLICY_VIOLATION.withReason("Duplicate session"));
-            } catch (IOException e) {
-                logger.error("[WS_CLOSE_FAILED] | userId={} sessionId={} error={}", userId, sessionId, e.getMessage(),
-                        e);
-            }
+        if (isDuplicateSession(userId, sessionId)) {
+            closeSessionSafely(wsSession, CloseStatus.POLICY_VIOLATION.withReason("Duplicate session"),
+                    userId, sessionId);
             return;
         }
 
-        // storing userid and user session in local registry and redis for other server
-        // to know where to send message for this user.
-        localWsSessionRegistry.add(sessionId, userId, wsSession);
-        redisSessionStore.saveUserSession(userId, serverId, sessionId);
-
-        logger.info("[WS_CONNECTED] | userId={} sessionId={} serverId={}", userId, sessionId, serverId);
-
-        ObjectNode connectedMsg = Json.mapper().createObjectNode();
-        connectedMsg.put("type", "connected");
-        connectedMsg.put("userId", userId);
-        connectedMsg.put("serverId", serverId);
-        wsSession.sendMessage(new TextMessage(connectedMsg.toString()));
+        registerSession(userId, sessionId, wsSession);
+        sendConnectedMessage(wsSession, userId);
     }
 
     @Override
     public void handleTextMessage(WebSocketSession wsSession, TextMessage message) throws Exception {
-        String userId = (String) wsSession.getAttributes().get("userId");// setting in WebSocketAuthHandshakeInterceptor
+        String userId = (String) wsSession.getAttributes().get("userId");
         String sessionId = wsSession.getId();
         String payload = message.getPayload();
 
         logger.debug("[WS_MESSAGE_RECEIVED] | userId={} sessionId={} payload={}", userId, sessionId, payload);
 
         try {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    ChatMessage chatMessage = Json.mapper().readValue(payload, ChatMessage.class);
-                    if (ChatWebSocketStatus.HEARTBEAT.equals(chatMessage.getWsStatus())) {
-                        redisSessionStore.updateLastActiveTimestamp(userId);
-                        logger.debug("[WS_HEARTBEAT] | userId={} sessionId={}", userId, sessionId);
-                        return;
-                    } else if (ChatWebSocketStatus.CHAT.equals(chatMessage.getWsStatus())) {
-
-                        chatMessage.setSentAt(Instant.now().toString());// other user will see this time when message arrive to them.
-                        chatMessage.setFromUserId(userId);
-                    }
-
-                    chatMessagePublisher.sendToUser(chatMessage);
-
-                    logger.info("[WS_MESSAGE_PUBLISHED] | userId={} sessionId={} toUserId={}",
-                            userId, sessionId, chatMessage.getToUserId());
-
-                } catch (Exception ex) {
-                    logger.error("[WS_MESSAGE_PROCESSING_FAILED] | userId={} sessionId={} payload={}",
+            CompletableFuture.runAsync(() ->
+                processInboundMessage(userId, sessionId, payload, wsSession), taskExecutor)
+                .exceptionally(ex -> {
+                    logger.error("[WS_ASYNC_TASK_FAILED] | userId={} sessionId={} payload={}",
                             userId, sessionId, payload, ex);
-                    try {
-                        ObjectNode errMsg = Json.mapper().createObjectNode();
-                        errMsg.put("error", "Invalid message format or server error");
-                        wsSession.sendMessage(new TextMessage(errMsg.toString()));
-                    } catch (IOException ioEx) {
-                        logger.error("[WS_ERROR_RESPONSE_FAILED] | userId={} sessionId={}", userId, sessionId, ioEx);
-                    }
-                }
-            }, taskExecutor).exceptionally(ex -> {
-                logger.error("[WS_ASYNC_TASK_FAILED] | userId={} sessionId={} payload={}",
-                        userId, sessionId, payload, ex);
-                return null;
-            });
-
+                    return null;
+                });
         } catch (Exception e) {
             logger.error("[WS_TASK_SUBMISSION_FAILED] | userId={} sessionId={} payload={}",
                     userId, sessionId, payload, e);
-            ObjectNode errMsg = Json.mapper().createObjectNode();
-            errMsg.put("error", "Server error, please retry");
-            wsSession.sendMessage(new TextMessage(errMsg.toString()));
+            sendErrorMessage(wsSession, "Server error, please retry");
         }
     }
 
@@ -144,7 +92,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         if (userId != null) {
             try {
-                // internally takes data from redis
                 userPresenceService.updateLastSeen(userId);
             } catch (Exception ex) {
                 logger.error("[WS_LAST_SEEN_UPDATE_FAILED] | userId={} sessionId={}", userId, sessionId, ex);
@@ -162,6 +109,78 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         } catch (Exception e) {
             logger.error("[WS_CLEANUP_FAILED] | userId={} sessionId={}", userId, sessionId, e);
+        }
+    }
+
+    // -- private helpers ----------------------------------------------------
+
+    private boolean isDuplicateSession(String userId, String sessionId) {
+        WebSocketSession localSession = localWsSessionRegistry.get(userId);
+        String storedRedisSessionId = redisSessionStore.getUserSessionId(userId);
+        boolean hasLocalSession = (localSession != null && localSession.isOpen());
+        boolean hasDifferentRedisSession = (storedRedisSessionId != null && !storedRedisSessionId.equals(sessionId));
+        return hasLocalSession || hasDifferentRedisSession;
+    }
+
+    private void closeSessionSafely(WebSocketSession wsSession, CloseStatus reason,
+            String userId, String sessionId) {
+        logger.warn("[WS_CONNECT_REJECTED] | userId={} sessionId={} reason=Duplicate session", userId, sessionId);
+        try {
+            wsSession.close(reason);
+        } catch (IOException e) {
+            logger.error("[WS_CLOSE_FAILED] | userId={} sessionId={} error={}", userId, sessionId, e.getMessage(), e);
+        }
+    }
+
+    private void registerSession(String userId, String sessionId, WebSocketSession wsSession) {
+        String serverId = System.getProperty("server.id");
+        localWsSessionRegistry.add(sessionId, userId, wsSession);
+        redisSessionStore.saveUserSession(userId, serverId, sessionId);
+        logger.info("[WS_CONNECTED] | userId={} sessionId={} serverId={}", userId, sessionId, serverId);
+    }
+
+    private void sendConnectedMessage(WebSocketSession wsSession, String userId) throws IOException {
+        ObjectNode msg = Json.mapper().createObjectNode();
+        msg.put("type", "connected");
+        msg.put("userId", userId);
+        msg.put("serverId", System.getProperty("server.id"));
+        wsSession.sendMessage(new TextMessage(msg.toString()));
+    }
+
+    private void sendErrorMessage(WebSocketSession wsSession, String error) {
+        try {
+            ObjectNode msg = Json.mapper().createObjectNode();
+            msg.put("error", error);
+            wsSession.sendMessage(new TextMessage(msg.toString()));
+        } catch (IOException e) {
+            logger.error("[WS_ERROR_RESPONSE_FAILED] | sessionId={}", wsSession.getId(), e);
+        }
+    }
+
+    private void processInboundMessage(String userId, String sessionId, String payload,
+            WebSocketSession wsSession) {
+        try {
+            ChatMessage chatMessage = Json.mapper().readValue(payload, ChatMessage.class);
+
+            if (ChatWebSocketStatus.HEARTBEAT.equals(chatMessage.getWsStatus())) {
+                redisSessionStore.updateLastActiveTimestamp(userId);
+                logger.debug("[WS_HEARTBEAT] | userId={} sessionId={}", userId, sessionId);
+                return;
+            }
+
+            if (ChatWebSocketStatus.CHAT.equals(chatMessage.getWsStatus())) {
+                chatMessage.setSentAt(Instant.now().toString());
+                chatMessage.setFromUserId(userId);
+            }
+
+            chatMessagePublisher.sendToUser(chatMessage);
+            logger.info("[WS_MESSAGE_PUBLISHED] | userId={} sessionId={} toUserId={}",
+                    userId, sessionId, chatMessage.getToUserId());
+
+        } catch (Exception ex) {
+            logger.error("[WS_MESSAGE_PROCESSING_FAILED] | userId={} sessionId={} payload={}",
+                    userId, sessionId, payload, ex);
+            sendErrorMessage(wsSession, "Invalid message format or server error");
         }
     }
 }
