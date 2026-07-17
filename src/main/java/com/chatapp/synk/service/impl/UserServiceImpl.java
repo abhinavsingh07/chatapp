@@ -113,11 +113,11 @@ public class UserServiceImpl implements UserService {
 
         UserDTO userDTO = result.get();
         userDTO.setPassword(PasswordUtil.MASKED_PASSWORD); // Mask password
-
-        // Fetch latest active profile picture ID for this user
-        userDTO.setMediaId(mediaRepository.findLatestActiveProfilePictureId(Long.parseLong(validId))
+        String mediaId = mediaRepository.findLatestActiveProfilePictureId(Long.parseLong(validId))
                 .map(String::valueOf)
-                .orElse(null));
+                .orElse(null);
+        // Fetch latest active profile picture ID for this user
+        userDTO.setMediaId(mediaId);
 
         return userDTO;
     }

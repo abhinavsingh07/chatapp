@@ -131,7 +131,7 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
          */
         @Query("SELECT m.id FROM Media m WHERE m.ownerUserId = :ownerUserId " +
                         "AND m.status = 'ACTIVE' AND m.usageType = 'PROFILE_PICTURE' " +
-                        "ORDER BY m.id DESC")
+                        "ORDER BY m.id DESC limit 1")
         Optional<Long> findLatestActiveProfilePictureId(@Param("ownerUserId") Long ownerUserId);
 
         /**

@@ -8,9 +8,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 //adding  JsonIgnoreProperties for now as Caching to redis causing json searlization issue for these fields.
-@JsonIgnoreProperties({"enabled", "accountNonExpired", "accountNonLocked", "credentialsNonExpired", "authorities"})
+@JsonIgnoreProperties({ "enabled", "accountNonExpired", "accountNonLocked", "credentialsNonExpired", "authorities" })
 public class CustomUserDetails implements UserDetails {
-    private String username;//setting phone no in this field
+    private String username;// setting phone no in this field
     private String password;
     private String name;
     private String email;
@@ -23,32 +23,77 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails() {
     }
 
-    /**
-     * Constructor for CustomUserDetails.
-     * calling in loadsUserByUsername method of CustomUserDetailsService
-     *
-     * @param username          the username (phone number)
-     * @param name              the name of the user
-     * @param password          the password of the user
-     * @param authorities       the authorities granted to the user
-     * @param email             the email of the user
-     * @param profilePictureUrl the URL of the user's profile picture
-     * @param id                the unique identifier of the user
-     */
-    public CustomUserDetails(String username, String name, String password, Collection<? extends GrantedAuthority> authorities, String email, String profilePictureUrl, String id) {
-        this.id = id;
-        this.username = username;
-        this.password = password;
-        this.authorities = authorities;
-        this.name = name;
-        this.email = email;
-        this.profilePictureUrl = profilePictureUrl;
-        //give me uthorities as comma seprated
-        this.userRoles = authorities.stream().map(GrantedAuthority::getAuthority).reduce((a, b) -> a + ";" + b).orElse("");
+    // -- Builder ---------------------------------------------------------------
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    //this is using in test
-    public CustomUserDetails(String username, String name, String email, String userRole, String profilePictureUrl,Collection<? extends GrantedAuthority> authorities) {
+    public static class Builder {
+        private String username;
+        private String password;
+        private String name;
+        private String email;
+        private String profilePictureUrl;
+        private String id;
+        private Collection<? extends GrantedAuthority> authorities;
+
+        public Builder username(String username) {
+            this.username = username;
+            return this;
+        }
+
+        public Builder password(String password) {
+            this.password = password;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder email(String email) {
+            this.email = email;
+            return this;
+        }
+
+        public Builder profilePictureUrl(String url) {
+            this.profilePictureUrl = url;
+            return this;
+        }
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder authorities(Collection<? extends GrantedAuthority> authorities) {
+            this.authorities = authorities;
+            return this;
+        }
+
+        public CustomUserDetails build() {
+            CustomUserDetails details = new CustomUserDetails();
+            details.id = this.id;
+            details.username = this.username;
+            details.password = this.password;
+            details.authorities = this.authorities;
+            details.name = this.name;
+            details.email = this.email;
+            details.profilePictureUrl = this.profilePictureUrl;
+            details.userRoles = this.authorities != null
+                    ? this.authorities.stream().map(GrantedAuthority::getAuthority)
+                            .reduce((a, b) -> a + ";" + b).orElse("")
+                    : "";
+            return details;
+        }
+    }
+
+    // -- constructors ---------------------------------------------------------
+    // this is using in test
+    public CustomUserDetails(String username, String name, String email, String userRole, String profilePictureUrl,
+            Collection<? extends GrantedAuthority> authorities) {
         this.username = username;
         this.name = name;
         this.email = email;
@@ -91,7 +136,7 @@ public class CustomUserDetails implements UserDetails {
         return UserDetails.super.isEnabled();
     }
 
-    //custom attributes
+    // custom attributes
 
     public String getName() {
         return name;

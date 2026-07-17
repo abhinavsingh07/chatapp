@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -72,22 +71,34 @@ public class ConversationParticipantServiceImpl implements ConversationParticipa
             logger.debug("Fetching participants for conversation ID: {}", conversationId.trim());
         }
         String validId = InputSecurityUtils.secureId(conversationId);
-        List<ConversationParticipant> list = conversationParticipantRepository.findByConversationId(Long.parseLong(validId));
-        return list.stream().map(Mapper::mapToParticipantDTO).collect(Collectors.toList());
+        List<ConversationParticipant> list = conversationParticipantRepository
+                .findByConversationId(Long.parseLong(validId));
+                
+        return list
+                .stream()
+                .map(Mapper::mapToParticipantDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "participantCache", key = "#conversationId", beforeInvocation = true),
-            @CacheEvict(value = "participantListCache", key = "#conversationId", beforeInvocation = true)
-    })
-    public void deleteByConversationId(String conversationId) {
+    @CacheEvict(value = "participantListCache", key = "#conversationId", beforeInvocation = true)
+    public void deleteParticipant(String conversationId, String userId) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Removing all conversation participants with conversation ID: {}", conversationId);
+            logger.debug("Removing participant: conversationId={}, userId={}", conversationId, userId);
         }
-        String validId = InputSecurityUtils.secureId(conversationId);
-        List<ConversationParticipant> list = conversationParticipantRepository.findByConversationId(Long.parseLong(validId));
-        // Batch delete — single DELETE query instead of N individual calls
-        conversationParticipantRepository.deleteAllInBatch(list);
+        String validConversationId = InputSecurityUtils.secureId(conversationId);
+        String validUserId = InputSecurityUtils.secureId(userId);
+
+        Optional<ConversationParticipant> participant = conversationParticipantRepository
+                .findByConversationIdAndUserId(Long.parseLong(validConversationId), Long.parseLong(validUserId));
+
+        if (participant.isPresent()) {
+            conversationParticipantRepository.delete(participant.get());
+            if (logger.isDebugEnabled()) {
+                logger.info("Participant removed: conversationId={}, userId={}", validConversationId, validUserId);
+            }
+        } else {
+            logger.warn("No participant found for conversationId={}, userId={}", validConversationId, validUserId);
+        }
     }
 }

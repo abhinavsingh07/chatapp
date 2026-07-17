@@ -32,7 +32,7 @@ public class ConversationParticipantController {
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.CREATED, "Participant added", List.of(added)));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/participant/{id}")
     public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> getById(@PathVariable String id) {
         ConversationParticipantDTO participant = participantService.getParticipantById(id);
         if (participant != null) {
@@ -44,9 +44,8 @@ public class ConversationParticipantController {
         }
     }
 
-    @GetMapping("/{conversationId}")
-    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> getByConversation(
-            @PathVariable String conversationId) {
+    @GetMapping("/conversation/{conversationId}")
+    public ResponseEntity<SuccessResponse<ConversationParticipantDTO>> getByConversation(@PathVariable String conversationId) {
 
         List<ConversationParticipantDTO> participants = participantService
                 .getParticipantsByConversationId(conversationId);
@@ -61,10 +60,12 @@ public class ConversationParticipantController {
         return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participants retrieved", participants));
     }
 
-    @DeleteMapping("/conversation/{conversationId}")
-    public ResponseEntity<SuccessResponse<Void>> delete(@PathVariable String conversationId) {
-        logger.info("Removing all participants for conversation ID: {}", conversationId);
-        participantService.deleteByConversationId(conversationId);
-        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participants removed", Collections.emptyList()));
+    @DeleteMapping("/conversation/{conversationId}/user/{userId}")
+    public ResponseEntity<SuccessResponse<Void>> deleteParticipant(
+            @PathVariable String conversationId,
+            @PathVariable String userId) {
+        logger.info("Removing participant: conversationId={}, userId={}", conversationId, userId);
+        participantService.deleteParticipant(conversationId, userId);
+        return ResponseEntity.ok(new SuccessResponse<>(HttpStatus.OK, "Participant removed", Collections.emptyList()));
     }
 }

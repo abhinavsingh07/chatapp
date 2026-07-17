@@ -38,15 +38,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         logger.debug("loadUserByUsername successful: identifier={}, phone={}, role={}", phoneNumberOrEmail, userDTO.getPhoneNumber(), "ROLE_USER");
-        //Now not storing ROLE_USER todo to save in db
-        return new CustomUserDetails(
-                userDTO.getPhoneNumber(),
-                userDTO.getName(),
-                userDTO.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority(userDTO.getRoleName().name())),
-                userDTO.getEmail(),
-                userDTO.getProfilePictureUrl(),
-                userDTO.getId());
+        return CustomUserDetails.builder()
+                .username(userDTO.getPhoneNumber())
+                .name(userDTO.getName())
+                .password(userDTO.getPassword())
+                .authorities(Collections.singletonList(new SimpleGrantedAuthority(userDTO.getRoleName().name())))
+                .email(userDTO.getEmail())
+                .profilePictureUrl(userDTO.getProfilePictureUrl())
+                .id(userDTO.getId())
+                .build();
     }
 
 }

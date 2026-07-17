@@ -136,20 +136,20 @@ class ConversationParticipantControllerTest {
     }
 
     @Test
-    void testDelete_Success() {
+    void testDeleteParticipant_Success() {
         // Arrange
-        doNothing().when(participantService).deleteByConversationId("participant1");
+        doNothing().when(participantService).deleteParticipant("convo1", "user1");
 
         // Act
         ResponseEntity<SuccessResponse<Void>> response =
-            participantController.delete("participant1");
+            participantController.deleteParticipant("convo1", "user1");
 
         // Assert
         assertNotNull(response.getBody());
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(HttpStatus.OK, response.getBody().getResponseCode());
-        assertEquals("Participants removed", response.getBody().getMessage());
+        assertEquals("Participant removed", response.getBody().getMessage());
         assertTrue(response.getBody().getData().isEmpty());
-        verify(participantService, times(1)).deleteByConversationId("participant1");
+        verify(participantService, times(1)).deleteParticipant("convo1", "user1");
     }
 }
